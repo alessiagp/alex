@@ -1,4 +1,4 @@
-#ALEX - AnaLysis for EXcogito
+# ALEX - AnaLysis for EXcogito
 
 This library was developed for the postprocessing and for the analysis of data obtained from the EXCOGITO software (https://github.com/potestiolab/excogito), a program investigating the mapping problem in coarse-grained modelling of biomolecules.
 
