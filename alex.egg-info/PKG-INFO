@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: alex
+Version: 1.0
+Summary: Postprocessing and analysis of data obtained from the EXCOGITO software
+Author: Alessia Guadagnin Pattaro
+Author-email: alessia.guadagnin@unitn.it
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
