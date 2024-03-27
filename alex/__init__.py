@@ -8,4 +8,4 @@ As of now, the library contains three subpackages:
 - mappings,
 - trajectory.
 """
-__all__ = ['entropy', 'mappings', 'trajectory']
+__all__ = ['entropy', 'mappings', 'trajectory', 'preliminar-analysis']
