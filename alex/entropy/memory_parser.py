@@ -44,17 +44,18 @@ def extract_entropies(traj_entropy_file):
     
 #------------------------------------------------------------------------------------------------#
 
-def entropy_data_for_plotting(extracted_entropy, confidence_interval):
+def entropy_data_for_plotting(extracted_entropy, Z=1.96):
     """
-    Function preparing entropy data for plotting, takes as input the file processed by the `extract_entropy` function and the desired confidence interval.
+    Function preparing entropy data for plotting, takes as input the file processed by the `extract_entropy` function, and the critical value for calculating the confidence interval.
+    Default value of Z is 1.96 (confidence interval of 0.95 with double-tailed normal distribution.
     
     Returns a tuple with (xaxis, lower_bound, upper_bound)
     """
     xaxis = range(0, len(extracted_entropy['mean']))
     
-    lower_bound = np.asarray(extracted_entropy['mean']-(np.asarray(extracted_entropy['std']*confidence_interval)))
+    lower_bound = np.asarray(extracted_entropy['mean']-Z*(np.asarray(extracted_entropy['std']/np.sqrt(len(extracted_entropy['mean'])))))
     
-    upper_bound = np.asarray(extracted_entropy['mean']+(np.asarray(extracted_entropy['std']*confidence_interval)))
+    upper_bound = np.asarray(extracted_entropy['mean']+Z*(np.asarray(extracted_entropy['std']/np.sqrt(len(extracted_entropy['mean'])))))
     
     return xaxis, lower_bound, upper_bound
 
