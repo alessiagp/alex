@@ -9,7 +9,7 @@ setup(
    packages=['alex'],  #same as name
    entry_points = {
     'console_scripts': ['alex=alex.run:main']
-    }
+    },
 
    install_requires=['numpy', 'pandas', 'scipy', 'mdtraj'], #external packages as dependencies
 )
