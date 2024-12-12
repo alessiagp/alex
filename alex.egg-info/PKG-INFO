@@ -4,6 +4,8 @@ Version: 1.0
 Summary: Postprocessing and analysis of data obtained from the EXCOGITO software
 Author: Alessia Guadagnin Pattaro
 Author-email: alessia.guadagnin@unitn.it
+License-File: LICENSE
 Requires-Dist: numpy
 Requires-Dist: pandas
 Requires-Dist: scipy
+Requires-Dist: mdtraj

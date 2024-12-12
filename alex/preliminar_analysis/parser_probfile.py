@@ -1,7 +1,7 @@
 import sys
 import os
 
-workdir = os.getcwd()+'/optimize-results/'
+workdir = f'{os.getcwd()}/optimize-results/'
 
 probabilities_name=str(sys.argv[1])
 PROBS_name=str(sys.argv[2])
