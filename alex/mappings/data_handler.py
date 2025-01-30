@@ -8,8 +8,8 @@ def load_data(workdir, filename):
     """
     Function that takes the working directory and the filename as input.
     The two accepted filenames indicate the formatting that will be produced:
-     - `filename=PROBS` to have data formatted to calculate atomistic occurrence probability (plain data plot) and to calculate aminoacid occurrence probability by max atom probability;
-     - `filename=48-MAPPINGS` to have data formatted to calculate aminoacid occurrence probability by average probability of atoms in the aminoacid.
+     - `filename=PROBS` to have data formatted to calculate atomistic occurrence probability (plain data plot) and to calculate amino acid occurrence probability by max atom probability;
+     - `filename=48-MAPPINGS` to have data formatted to calculate amino acid occurrence probability by average probability of atoms in the amino acid.
     """
 # generalise from 48-MAPPINGS to just MAPPINGS
     data_list = []

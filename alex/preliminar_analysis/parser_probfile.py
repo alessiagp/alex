@@ -1,13 +1,13 @@
 import sys
 import os
 
-workdir = f'{os.getcwd()}/optimize-results/'
+workdir = f'{os.getcwd()}/optimize-results'
 
 probabilities_name=str(sys.argv[1])
 PROBS_name=str(sys.argv[2])
 
-input_file = workdir+probabilities_name
-output_file = workdir+PROBS_name
+input_file = f"{workdir}/{probabilities_name}"
+output_file = f"{workdir}/{PROBS_name}"
 
 # Read the content from the input file
 with open(input_file, 'r') as f:

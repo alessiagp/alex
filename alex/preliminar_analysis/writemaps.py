@@ -5,7 +5,7 @@ import sys
 mappings=[]
 entropies = []
 workdir = os.getcwd()
-directory=workdir+'/optimize-results/'
+directory=f"{workdir}/optimize-results/"
 map_filepath=""
 probs_filepath=""
 
