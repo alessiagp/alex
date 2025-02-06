@@ -1,38 +1,67 @@
-import re
 import os
+import re
 
-# Directory where your files are located
-curr_dir=os.getcwd()
-directory = curr_dir+'/optimize-results'
+class SmapExtractor:
+    def __init__(self, directory):
+        """
+        Initialize the extractor with the target directory.
+        """
+        self.directory = os.path.join(os.getcwd(), directory)
+        self.pattern = r"SMAP=(\d+\.\d+)"
+        self.all_smap_values = []
+        self.entropy_file = None  # Will be assigned later
 
-# Define the regular expression pattern
-pattern = r'SMAP=(\d+\.\d+)'
+        self._validate_directory()
 
-# List to store all SMAP values
-all_smap_values = []
+    def _validate_directory(self):
+        """
+        Check if the directory exists.
+        """
+        if not os.path.exists(self.directory):
+            print(f"Error: Directory '{self.directory}' does not exist.")
+            exit(1)
 
-# Loop through the files in the directory
-for filename in os.listdir(directory):
-    Smap=[]
-    if filename.endswith(".dat"):  # Change the file extension as needed
-        file_path = os.path.join(directory, filename)
-        with open(file_path, 'r') as file:
-            text = file.read()
-            smap_values = re.findall(pattern, text)
-            Smap.extend(smap_values)
-    if len(Smap) != 0:
-        all_smap_values.append(Smap)
+    def extract_smap_values(self):
+        """
+        Extract SMAP values from .dat files in the directory.
+        """
+        for filename in os.listdir(self.directory):
+            file_path = os.path.join(self.directory, filename)
 
-# Check for values retrieved
-print(all_smap_values)
-print("Number of entropies retrieved: ", len(all_smap_values))
+            # Find the entropy file for later writing
+            if filename.startswith("ENTROPY"):
+                self.entropy_file = file_path
 
-# we write the matrix into the ENTROPY-1-1-100 file
-for filename in os.listdir(directory):
-    if filename.startswith("ENTROPY"):
-        entropy_path = os.path.join(directory, filename)
-        with open(entropy_path, 'w') as EF:
-            for series in all_smap_values:
-                for value in series:
-                    EF.write(str(value).strip("''")+" ")
-                EF.write("\n")
+            # Extract SMAP values from .dat files
+            if filename.endswith(".dat"):
+                with open(file_path, "r") as file:
+                    text = file.read()
+                    smap_values = re.findall(self.pattern, text)
+
+                if smap_values:
+                    self.all_smap_values.append(smap_values)
+
+        print("Extracted SMAP Values:", self.all_smap_values)
+        print("Number of entropies retrieved:", len(self.all_smap_values))
+
+    def write_to_entropy_file(self):
+        """
+        Write extracted SMAP values to the entropy file.
+        """
+        if not self.entropy_file:
+            print("Error: No ENTROPY file found in the directory.")
+            return
+
+        with open(self.entropy_file, "w") as ef:
+            for series in self.all_smap_values:
+                ef.write(" ".join(series) + "\n")
+
+        print(f"SMAP values successfully written to '{self.entropy_file}'")
+
+# ==============================
+# Main execution
+# ==============================
+if __name__ == "__main__":
+    extractor = SmapExtractor("optimize-results")
+    extractor.extract_smap_values()
+    extractor.write_to_entropy_file()

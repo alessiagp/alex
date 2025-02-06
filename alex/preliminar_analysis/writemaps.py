@@ -2,57 +2,109 @@ import os
 import re
 import sys
 
-mappings=[]
-entropies = []
-workdir = os.getcwd()
-directory=f"{workdir}/optimize-results/"
-map_filepath=""
-probs_filepath=""
+class MappingProcessor:
+    def __init__(self, opt_name, natoms):
+        self.workdir = os.getcwd()
+        self.directory = os.path.join(self.workdir, "optimize-results")
+        self.opt_name = opt_name
+        self.natoms = natoms
 
-opt_name=str(sys.argv[1])
+        self.mappings = []
+        self.map_filepath = ""
+        self.probs_filepath = ""
 
-def make_counts(mapping_matrix, natoms, nmaps): #memoisation algorithm
-	"""Memoisation algorithm to retrieve the occurrences of each atom in each mapping"""	
-	memo_list = [0] * natoms 
-	for row in mapping_matrix: #for each of the 48 mappings
-		for value in row: #for each atom in the mapping
-			memo_list[value]+=1
-	memo_list[:] = [x / nmaps for x in memo_list]
-	return memo_list
+        self._validate_inputs()
 
-for FILE in os.listdir(directory):
-    print(FILE)
+    def _validate_inputs(self):
+        """
+        Validate input arguments and ensure directory exists.
+        """
+        if not os.path.exists(self.directory):
+            print(f"Error: Directory '{self.directory}' does not exist.")
+            sys.exit(1)
+    
+    def make_counts(self, mapping_matrix, nmaps):
+        """
+        Memoization algorithm to count occurrences of each atom in each mapping.
+        """
+        memo_list = [0] * self.natoms
+        for row in mapping_matrix:
+            for value in row:
+                memo_list[value] += 1
+        return [x / nmaps for x in memo_list] 
 
-    """Retrieve LOWEST MAPPING from each of the 48 files"""
-    if FILE.startswith(opt_name):
-        SA_filepath = os.path.join(directory, FILE)
-        print("\nSA optimisation file found. Writing lowest mapping into file...")
-        with open(SA_filepath, 'r') as f:
-            lines = f.read() #.replace('\n',"")
-            numbers_string = re.search(r'conv mapping\n([\d\s]+)last_smap', lines, re.DOTALL).group(1)
-            numbers = list(map(int, numbers_string.split()))
-            mappings.append(numbers)
+    def process_files(self):
+        """
+        Iterate through directory files and process mappings.
+        """
+        for file in os.listdir(self.directory):
+            print(file)
+            filepath = os.path.join(self.directory, file)
 
-    print("Length of mapping file so far: ", len(mappings))
+            if file.startswith(self.opt_name):
+                self._process_mapping_file(filepath)
 
-    """Calculate probabilities for all atoms in the protein and copy results into file"""
-    if FILE.startswith('probabilities'):
-        probs_filepath = os.path.join(directory, FILE)
-        print("\nfound probabilities file!")
+            elif file.startswith("probabilities"):
+                self.probs_filepath = filepath
+                print("\nFound probabilities file:", self.probs_filepath)
 
-    """Recording mapping file to global variable"""
-    if FILE.startswith('48-MAPPINGS'):
-       map_filepath = os.path.join(directory, FILE)
+            elif file.startswith("48-MAPPINGS"):
+                self.map_filepath = filepath
 
-    """ Write mapping of current trajectory into file"""
-    if len(mappings) == 48:
-        print("\nwriting mapping into 48-MAPPINGS file...")
-        with open(map_filepath, 'w') as MF:
-            for row in mappings:
-                MF.write((str(row).strip("[]"))+"\n")
-        print("\ncalculating probabilities...")
-        probabilities = make_counts(mappings, 93, len(mappings))
-        with open(probs_filepath, 'w') as PF:
-            PF.write(str(probabilities).strip("[]"))
+            # When mappings reach 48, process and write results
+            if len(self.mappings) == 48:
+                self._write_results()
+                break  # No need to continue processing more files
 
+    def _process_mapping_file(self, filepath):
+        """
+        Extract the lowest mapping from an optimization file.
+        """
+        print("\nSA optimization file found. Writing lowest mapping into file...")
 
+        with open(filepath, 'r') as f:
+            lines = f.read()
+
+        match = re.search(r'conv mapping\n([\d\s]+)last_smap', lines, re.DOTALL)
+        if match:
+            numbers = list(map(int, match.group(1).split()))
+            self.mappings.append(numbers)
+        else:
+            print(f"Warning: No mapping found in {os.path.basename(filepath)}")
+
+        print("Length of mapping file so far:", len(self.mappings))
+
+    def _write_results(self):
+        """
+        Write mappings and probabilities to respective files.
+        """
+        if not self.map_filepath:
+            print("Error: 48-MAPPINGS file not found.")
+            sys.exit(1)
+
+        print("\nWriting mapping into 48-MAPPINGS file...")
+        with open(self.map_filepath, 'w') as mf:
+            for row in self.mappings:
+                mf.write(" ".join(map(str, row)) + "\n")  # Cleaner formatting
+
+        print("\nCalculating probabilities...")
+        probabilities = self.make_counts(self.mappings, self.natoms, len(self.mappings))
+
+        if self.probs_filepath:
+            with open(self.probs_filepath, 'w') as pf:
+                pf.write(" ".join(map(str, probabilities)))
+        else:
+            print("Warning: No probabilities file found.")
+
+# ==============================
+# Main execution
+# ==============================
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Error: Missing arguments. Usage: python script.py <optimization_name> <num_atoms>")        
+        sys.exit(1)
+
+    opt_name = sys.argv[1]
+    natoms = int(sys.argv[2])
+    processor = MappingProcessor(opt_name, natoms)
+    processor.process_files()
