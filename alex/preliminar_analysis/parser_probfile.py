@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 
 class FileFormatter:
     def __init__(self, opt_name):
@@ -32,18 +33,19 @@ class FileFormatter:
 
     def format_file(self):
         """
-        Reads input file, replaces commas with newlines, and writes to output file.
+        Reads input file, replaces commas and spaces with newlines, and writes to output file.
         """
         with open(self.input_file, 'r') as f:
             content = f.read()
 
-        # Replace commas with newlines
-        formatted_content = content.replace(',', '\n')
+        # Split numbers by commas and spaces, then remove empty values
+        formatted_values = [num.strip() for num in re.split(r'[,\s]+', content) if num.strip()]
 
         with open(self.output_file, 'w') as f:
-            f.write(formatted_content)
+            f.write("\n".join(formatted_values) + "\n")  # Ensure newline at end of file
 
         print(f"File successfully formatted and saved as '{self.output_file}'")
+
 
 # ==============================
 # Main Execution
