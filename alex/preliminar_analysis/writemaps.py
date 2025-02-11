@@ -14,19 +14,40 @@ class MappingProcessor:
         self.probs_filepath = ""
 
         self._validate_inputs()
+        self._ensure_required_files()  # Ensure required files exist
 
     def _validate_inputs(self):
-        """
-        Validate input arguments and ensure directory exists.
-        """
+        """Validate input arguments and ensure directory exists."""
         if not os.path.exists(self.directory):
             print(f"Error: Directory '{self.directory}' does not exist.")
             sys.exit(1)
-    
+
+    def _ensure_required_files(self):
+        """Check if '48-MAPPINGS' and 'probabilities' files exist, create them if missing."""
+        mapping_found = False
+        probabilities_found = False
+
+        for file in os.listdir(self.directory):
+            if file.startswith("48-MAPPINGS"):
+                self.map_filepath = os.path.join(self.directory, file)
+                mapping_found = True
+            elif file.startswith("probabilities"):
+                self.probs_filepath = os.path.join(self.directory, file)
+                probabilities_found = True
+
+        # If files are missing, create empty ones
+        if not mapping_found:
+            self.map_filepath = os.path.join(self.directory, f"48-MAPPINGS_{self.opt_name}.txt")
+            open(self.map_filepath, 'w').close()
+            print(f"Created missing file: {self.map_filepath}")
+
+        if not probabilities_found:
+            self.probs_filepath = os.path.join(self.directory, f"probabilities_{self.opt_name}.txt")
+            open(self.probs_filepath, 'w').close()
+            print(f"Created missing file: {self.probs_filepath}")
+
     def make_counts(self, mapping_matrix, nmaps):
-        """
-        Memoization algorithm to count occurrences of each atom in each mapping.
-        """
+        """Memoization algorithm to count occurrences of each atom in each mapping."""
         memo_list = [0] * self.natoms
         for row in mapping_matrix:
             for value in row:
@@ -34,9 +55,7 @@ class MappingProcessor:
         return [x / nmaps for x in memo_list] 
 
     def process_files(self):
-        """
-        Iterate through directory files and process mappings.
-        """
+        """Iterate through directory files and process mappings."""
         for file in os.listdir(self.directory):
             print(file)
             filepath = os.path.join(self.directory, file)
@@ -44,22 +63,13 @@ class MappingProcessor:
             if file.startswith(self.opt_name):
                 self._process_mapping_file(filepath)
 
-            elif file.startswith("probabilities"):
-                self.probs_filepath = filepath
-                print("\nFound probabilities file:", self.probs_filepath)
-
-            elif file.startswith("48-MAPPINGS"):
-                self.map_filepath = filepath
-
-            # When mappings reach 48, process and write results
+            # Files were already checked and created if missing
             if len(self.mappings) == 48:
                 self._write_results()
                 break  # No need to continue processing more files
 
     def _process_mapping_file(self, filepath):
-        """
-        Extract the lowest mapping from an optimization file.
-        """
+        """Extract the lowest mapping from an optimization file."""
         print("\nSA optimization file found. Writing lowest mapping into file...")
 
         with open(filepath, 'r') as f:
@@ -75,26 +85,19 @@ class MappingProcessor:
         print("Length of mapping file so far:", len(self.mappings))
 
     def _write_results(self):
-        """
-        Write mappings and probabilities to respective files.
-        """
-        if not self.map_filepath:
-            print("Error: 48-MAPPINGS file not found.")
-            sys.exit(1)
-
+        """Write mappings and probabilities to respective files."""
         print("\nWriting mapping into 48-MAPPINGS file...")
         with open(self.map_filepath, 'w') as mf:
             for row in self.mappings:
                 mf.write(" ".join(map(str, row)) + "\n")  # Cleaner formatting
 
         print("\nCalculating probabilities...")
-        probabilities = self.make_counts(self.mappings, self.natoms, len(self.mappings))
+        probabilities = self.make_counts(self.mappings, len(self.mappings))
 
-        if self.probs_filepath:
-            with open(self.probs_filepath, 'w') as pf:
-                pf.write(" ".join(map(str, probabilities)))
-        else:
-            print("Warning: No probabilities file found.")
+        with open(self.probs_filepath, 'w') as pf:
+            pf.write(" ".join(map(str, probabilities)))
+
+        print(f"\nResults written successfully to {self.map_filepath} and {self.probs_filepath}")
 
 # ==============================
 # Main execution
@@ -106,5 +109,6 @@ if __name__ == "__main__":
 
     opt_name = sys.argv[1]
     natoms = int(sys.argv[2])
+
     processor = MappingProcessor(opt_name, natoms)
     processor.process_files()

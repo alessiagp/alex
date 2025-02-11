@@ -2,15 +2,17 @@ import os
 import sys
 
 class FileFormatter:
-    def __init__(self, input_filename, output_filename):
+    def __init__(self, opt_name):
         """
         Initialize the file formatter with input and output file paths.
         """
         self.workdir = os.path.join(os.getcwd(), "optimize-results")
-        self.input_file = os.path.join(self.workdir, input_filename)
-        self.output_file = os.path.join(self.workdir, output_filename)
+        self.opt_name = opt_name
+        self.input_file = os.path.join(self.workdir, f"probabilities_{self.opt_name}.txt")
+        self.output_file = os.path.join(self.workdir, f"PROBS_{self.opt_name}.txt")
 
         self._validate_input_file()
+        self._ensure_output_file()  # Ensure output file exists
 
     def _validate_input_file(self):
         """
@@ -19,6 +21,14 @@ class FileFormatter:
         if not os.path.exists(self.input_file):
             print(f"Error: Input file '{self.input_file}' not found.")
             sys.exit(1)
+
+    def _ensure_output_file(self):
+        """
+        Create the output file if it does not exist.
+        """
+        if not os.path.exists(self.output_file):
+            open(self.output_file, 'w').close()
+            print(f"Created missing output file: {self.output_file}")
 
     def format_file(self):
         """
@@ -36,15 +46,13 @@ class FileFormatter:
         print(f"File successfully formatted and saved as '{self.output_file}'")
 
 # ==============================
-# Main execution
+# Main Execution
 # ==============================
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Error: Missing arguments. Usage: python script.py <input_filename> <output_filename>")
+    if len(sys.argv) < 2:
+        print("Error: Missing argument. Usage: python script.py <optimization_name>")
         sys.exit(1)
 
-    input_filename = sys.argv[1]
-    output_filename = sys.argv[2]
-
-    formatter = FileFormatter(input_filename, output_filename)
+    opt_name = sys.argv[1]  # Now correctly uses only opt_name
+    formatter = FileFormatter(opt_name)
     formatter.format_file()
