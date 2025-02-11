@@ -8,3 +8,17 @@ alex.egg-info/dependency_links.txt
 alex.egg-info/entry_points.txt
 alex.egg-info/requires.txt
 alex.egg-info/top_level.txt
+alex/entropy/__init__.py
+alex/entropy/entropy_correlation.py
+alex/entropy/memory_parser.py
+alex/mappings/__init__.py
+alex/mappings/data_handler.py
+alex/mappings/make_counts.py
+alex/preliminar_analysis/__init__.py
+alex/preliminar_analysis/energy_xvg_to_txt.py
+alex/preliminar_analysis/parser_probfile.py
+alex/preliminar_analysis/retrieve_entropy.py
+alex/preliminar_analysis/writemaps.py
+alex/trajectory/__init__.py
+alex/trajectory/fraction_native_contacts.py
+alex/trajectory/traj_slicing.py
