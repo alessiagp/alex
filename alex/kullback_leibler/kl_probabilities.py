@@ -140,25 +140,25 @@ class KLProbabilities:
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        raise ValueError("Usage: kl_probabilities_serial.py <chosen_struct> <L> <selection> <save_prefix>")
+        raise ValueError("Usage: kl_probabilities_serial.py <gro_filename> <traj_filename> <chosen_struct> <L> <selection> <save_prefix>")
 
-    chosen_struct = sys.argv[1].strip()
+    chosen_struct = sys.argv[3].strip()
     try:
-        L = int(sys.argv[2])
+        L = int(sys.argv[4])
         if L <= 0:
             raise ValueError("The 'L' argument must be a positive integer.")
     except ValueError as e:
         raise ValueError("Invalid 'L' argument. It should be a positive integer.") from e
     
-    selection = sys.argv[3].strip()
-    save_prefix = sys.argv[4].strip()
+    selection = sys.argv[5].strip()
+    save_prefix = sys.argv[6].strip()
 
     main_dir = Path.cwd().parent #SIGMA1 dir
     save_dir = main_dir / chosen_struct / "KL_probs"
     datadir = main_dir / chosen_struct / "data"
     
-    gro_file = datadir / f"{save_prefix}_v1_dry.gro"
-    traj_file = datadir / f"{save_prefix}_dry_fit.xtc"
+    gro_file = datadir / f"{sys.argv[1].strip()}"
+    traj_file = datadir / f"{sys.argv[2].strip()}"
     
     if not gro_file.exists():
         raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
