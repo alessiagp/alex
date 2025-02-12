@@ -3,8 +3,8 @@
 This library was developed for the postprocessing and for the analysis of data obtained from the EXCOGITO software (https://github.com/potestiolab/excogito), a program investigating the mapping problem in coarse-grained modelling of biomolecules.
 
 For more information about the software and for some use cases have a look at:
-* **A Multiscale Analysis of the CzrA Transcription Repressor Highlights the Allosteric Changes Induced by Metal Ion Binding**, M Rigoli, R Potestio, R Menichetti, The Journal of Physical Chemistry B 2025, 129(2), 611 -- 625
-* **EXCOGITO, an EXtensible COarse-GraIning TOol**, M Giulini, R Fiorentini, L Tubiana, R Potestio, Journal of Chemical Information and Modeling 2024, 64(12), 4912 -- 4927
+* **A Multiscale Analysis of the CzrA Transcription Repressor Highlights the Allosteric Changes Induced by Metal Ion Binding**, M Rigoli, R Potestio, R Menichetti, The Journal of Physical Chemistry B 2025, 129(2), 611-625
+* **EXCOGITO, an EXtensible COarse-GraIning TOol**, M Giulini, R Fiorentini, L Tubiana, R Potestio, Journal of Chemical Information and Modeling 2024, 64(12), 4912-4927
 * **A journey through mapping space: characterising the statistical and metric properties of reduced representations of macromolecules**, R Menichetti, M Giulini, R Potestio, The European Physical Journal B 2021, 94(10), 1-26
 * **An Information-Theory-Based Approach for Optimal Model Reduction of Biomolecules**, M Giulini, R Menichetti, MS Shell, R Potestio, Journal of Chemical Theory and Computation 2020, 16(11), 6795-6813
 

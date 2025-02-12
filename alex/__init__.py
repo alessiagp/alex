@@ -9,4 +9,4 @@ As of now, the library contains four subpackages:
 - trajectory
 - preliminar_analysis.
 """
-__all__ = ['entropy', 'mappings', 'trajectory', 'preliminar_analysis']
+__all__ = ['entropy', 'mappings', 'trajectory', 'preliminar_analysis', 'kullback_leibler']
