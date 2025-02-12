@@ -71,6 +71,12 @@ class KLProbabilities:
         Compute microstate probabilities based on clustering labels.
         Select representative frames and write them to a new trajectory.
         """
+        label_counts = Counter(cl_labels)
+        total = sum(label_counts.values())
+        label_probs = np.array([label_counts[el] / total for el in cl_labels])
+
+        logging.info(f"Length of label_probs: {len(label_probs)}")
+        logging.info("Label probabilities computed.")
 
         # Select one random frame per cluster
         unique_classes = list(label_counts.keys())
@@ -78,24 +84,19 @@ class KLProbabilities:
 
         logging.info(f"Selected frames: {cl_selection}")
         logging.info(f"Number of selected frames: {len(cl_selection)}")
-        
-        label_counts = Counter(cl_selection)
-        total = sum(label_counts.values())  # Correct denominator
-        label_probs = np.array([count / total for count in label_counts.values()])  # Compute probabilities
-        
-        logging.info(f"Total (denominator): {total}")
-        logging.info(f"Length of label_probs: {len(label_probs)}")
-        logging.info(f"Sum of label_probs: {np.sum(label_probs)}")        
-        logging.info("Label probabilities computed.")
 
         # Output file path
         output_traj = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}-KL_frames.xtc"
 
+        # Ensure there are atoms before writing
+        if len(self.t.atoms) == 0:
+            raise ValueError("No atoms selected, cannot write trajectory.")
+
         # Write selected frames to a new trajectory
         with mda.Writer(str(output_traj), n_atoms=self.t.atoms.n_atoms) as writer:
             for frame in cl_selection:
-                self.t.trajectory[frame]  # Move to selected frame
-                writer.write(self.t)  # Write current frame to output
+                self.t.trajectory[frame]
+                writer.write(self.t)
 
         logging.info(f"Selected frames saved to: {output_traj}")
 
@@ -137,43 +138,3 @@ class KLProbabilities:
         cl_labels = self.clustering(dist_matrix)
         microstates_probs = self.labeling(cl_labels)
         self.savefile(microstates_probs)
-
-if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        raise ValueError("Usage: kl_probabilities_serial.py <gro_filename> <traj_filename> <chosen_struct> <L> <selection> <save_prefix>")
-
-    chosen_struct = sys.argv[3].strip()
-    try:
-        L = int(sys.argv[4])
-        if L <= 0:
-            raise ValueError("The 'L' argument must be a positive integer.")
-    except ValueError as e:
-        raise ValueError("Invalid 'L' argument. It should be a positive integer.") from e
-    
-    selection = sys.argv[5].strip()
-    save_prefix = sys.argv[6].strip()
-
-    main_dir = Path.cwd().parent #SIGMA1 dir
-    save_dir = main_dir / chosen_struct / "KL_probs"
-    datadir = main_dir / chosen_struct / "data"
-    
-    gro_file = datadir / f"{sys.argv[1].strip()}"
-    traj_file = datadir / f"{sys.argv[2].strip()}"
-    
-    if not gro_file.exists():
-        raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
-    if not traj_file.exists():
-        raise FileNotFoundError(f"The XTC file '{traj_file}' does not exist.")
-    
-    save_dir.mkdir(exist_ok=True)
-    
-    klp = KLProbabilities(
-        gro_ref=str(gro_file),
-        traj_ref=str(traj_file),
-        selection=selection,
-        chosen_struct=chosen_struct,
-        L=L,
-        save_dir=str(save_dir),
-        save_prefix=save_prefix
-    )
-    klp.processing()
