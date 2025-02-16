@@ -102,6 +102,14 @@ class KLProbabilities:
 
         return label_probs
 
+    def savefile(self, microstates_probs: np.ndarray):
+        """
+        Save microstate probabilities to a text file.
+        """
+        output_file = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}_microst_p.txt"
+        np.savetxt(output_file, microstates_probs, fmt="%.6f")
+        logging.info(f"Microstate probabilities saved to {output_file}")
+
     def processing(self):
         """
         Execute the KL probabilities calculation pipeline.
