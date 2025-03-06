@@ -16,15 +16,15 @@ import random
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, gro_ref: str, traj_ref: str, selection: str, chosen_struct: str, L: int, save_dir: str, save_prefix: str):
-        self.gro_file = Path(gro_ref)
-        self.traj_file = Path(traj_ref)
+    def __init__(self, gro_file: str, traj_file: str, selection: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
+        self.gro_file = Path(gro_file)
+        self.traj_file = Path(traj_file)
         self.selection = selection.strip()
         self.chosen_struct = chosen_struct
         self.L = L
         
         self.save_dir = Path(save_dir)
-        self.save_prefix = save_prefix
+        self.struct_type = struct_type
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize MDAnalysis Universe
@@ -50,6 +50,8 @@ class KLProbabilities:
 
         logging.info("Calculating diffusion matrix.")
         self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection).run().results.dist_matrix
+        print(self.dist_matrix)
+        np.savetxt(f"{self.chosen_struct}-{self.struct_type}-rmsd_diffmat.dat", self.dist_matrix)
         
         return self.dist_matrix
 
@@ -86,7 +88,7 @@ class KLProbabilities:
         logging.info(f"Number of selected frames: {len(cl_selection)}")
 
         # Output file path
-        output_traj = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}-KL_frames.xtc"
+        output_traj = self.save_dir / f"{self.struct_type}-{self.chosen_struct}-KL_frames.xtc"
 
         # Ensure there are atoms before writing
         if len(self.t.atoms) == 0:
@@ -101,12 +103,28 @@ class KLProbabilities:
         logging.info(f"Selected frames saved to: {output_traj}")
 
         return label_probs
+    
+    def sns_plot(self, mat1: np.ndarray):
+        """
+        Generate and save an RMSD matrix heatmap.
+        """
+        if mat1.shape[0] > 500:
+            logging.warning("Matrix is large; consider downsampling for better visualization.")
+        
+        logging.info("Generating heatmap.")
+        sns.heatmap(mat1, cmap='inferno', cbar_kws={'label': 'RMSD (Angstrom)'})
+        plt.xlabel("Frames")
+        plt.ylabel("Frames")
+        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.chosen_struct}")
+        plt.savefig(self.save_dir / f"{self.struct_type}-{self.chosen_struct}-RMSD_matrix.png")
+        plt.close()
+        logging.info("Heatmap saved.")
 
     def savefile(self, microstates_probs: np.ndarray):
         """
         Save microstate probabilities to a text file.
         """
-        output_file = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}_microst_p.txt"
+        output_file = self.save_dir / f"{self.struct_type}-{self.chosen_struct}_microst_p.txt"
         np.savetxt(output_file, microstates_probs, fmt="%.6f")
         logging.info(f"Microstate probabilities saved to {output_file}")
 
@@ -123,41 +141,39 @@ class KLProbabilities:
         self.savefile(microstates_probs)
 
 if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        raise ValueError("Usage: kl_probabilities_serial.py <gro_filename> <traj_filename> <chosen_struct> <L> <selection> <save_prefix>")
+    if len(sys.argv) < 7:
+        raise ValueError("Usage: kl_probabilities.py <gro_file> <traj_file> <save_dir> <struct_type> <chosen_struct> <selection> <L>")
 
-    chosen_struct = sys.argv[3].strip()
+    gro_file = Path(sys.argv[1].strip())
+    traj_file = Path(sys.argv[2].strip())
+    save_dir = Path(sys.argv[3].strip())
+    struct_type = sys.argv[4].strip()
+    chosen_struct = sys.argv[5].strip()
+    selection = sys.argv[6].strip()
+    
     try:
-        L = int(sys.argv[4])
+        L = int(sys.argv[7])
         if L <= 0:
             raise ValueError("The 'L' argument must be a positive integer.")
     except ValueError as e:
         raise ValueError("Invalid 'L' argument. It should be a positive integer.") from e
     
-    selection = sys.argv[5].strip()
-    save_prefix = sys.argv[6].strip()
 
-    main_dir = Path.cwd().parent
-    save_dir = main_dir / chosen_struct / "KL_probs"
-    datadir = main_dir / chosen_struct / "data"
-    
-    gro_file = datadir / f"{sys.argv[1].strip()}"
-    traj_file = datadir / f"{sys.argv[2].strip()}"
     
     if not gro_file.exists():
         raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
     if not traj_file.exists():
         raise FileNotFoundError(f"The XTC file '{traj_file}' does not exist.")
     
-    save_dir.mkdir(exist_ok=True)
+    save_dir.mkdir(parents=True, exist_ok=True)
     
     klp = KLProbabilities(
-        gro_ref=str(gro_file),
-        traj_ref=str(traj_file),
+        gro_file=str(gro_file),
+        traj_file=str(traj_file),
         selection=selection,
         chosen_struct=chosen_struct,
         L=L,
         save_dir=str(save_dir),
-        save_prefix=save_prefix
+        struct_type=struct_type
     )
     klp.processing()
