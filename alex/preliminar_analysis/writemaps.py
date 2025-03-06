@@ -100,7 +100,7 @@ class MappingProcessor:
 # ==============================
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Error: Missing arguments. Usage: python script.py <optimization_name> <num_atoms>")        
+        print("Error: Missing arguments. Usage: python3 writemaps.py <optimization_name> <num_atoms>")        
         sys.exit(1)
 
     opt_name = sys.argv[1]
