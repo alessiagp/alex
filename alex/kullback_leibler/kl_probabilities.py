@@ -140,33 +140,36 @@ class KLProbabilities:
         microstates_probs = self.labeling(cl_labels)
         self.savefile(microstates_probs)
 
+import argparse
+
 if __name__ == '__main__':
-    if len(sys.argv) < 7:
-        raise ValueError("Usage: kl_probabilities.py <gro_file> <traj_file> <save_dir> <struct_type> <chosen_struct> <selection> <L>")
+    parser = argparse.ArgumentParser(description="Perform KL clustering on molecular dynamics trajectories.")
+    
+    parser.add_argument("-g", "--gro", required=True, type=str, help="Path to the GRO file.")
+    parser.add_argument("-x", "--xtc", required=True, type=str, help="Path to the XTC trajectory file.")
+    parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
+    parser.add_argument("-t", "--struct_type", required=True, type=str, help="Structure type label.")
+    parser.add_argument("-c", "--chosen_struct", required=True, type=str, help="Chosen structure name.")
+    parser.add_argument("-sel", "--selection", required=True, type=str, help="Selection string for atoms.")
+    parser.add_argument("-l", "--clusters", required=True, type=int, help="Number of clusters (L).")
+    
+    args = parser.parse_args()
 
-    gro_file = Path(sys.argv[1].strip())
-    traj_file = Path(sys.argv[2].strip())
-    save_dir = Path(sys.argv[3].strip())
-    struct_type = sys.argv[4].strip()
-    chosen_struct = sys.argv[5].strip()
-    selection = sys.argv[6].strip()
-    
-    try:
-        L = int(sys.argv[7])
-        if L <= 0:
-            raise ValueError("The 'L' argument must be a positive integer.")
-    except ValueError as e:
-        raise ValueError("Invalid 'L' argument. It should be a positive integer.") from e
-    
+    gro_file = Path(args.gro)
+    traj_file = Path(args.xtc)
+    save_dir = Path(args.save_dir)
+    struct_type = args.struct_type
+    chosen_struct = args.chosen_struct
+    selection = args.selection
+    L = args.clusters
 
-    
     if not gro_file.exists():
         raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
     if not traj_file.exists():
         raise FileNotFoundError(f"The XTC file '{traj_file}' does not exist.")
-    
+
     save_dir.mkdir(parents=True, exist_ok=True)
-    
+
     klp = KLProbabilities(
         gro_file=str(gro_file),
         traj_file=str(traj_file),
@@ -176,4 +179,6 @@ if __name__ == '__main__':
         save_dir=str(save_dir),
         struct_type=struct_type
     )
+    
     klp.processing()
+
