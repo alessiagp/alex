@@ -1,13 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import logging
 from pathlib import Path
 from collections import Counter
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
-import MDAnalysis as mda
-from MDAnalysis.analysis import diffusionmap, align
 import os
 import sys
 import random
@@ -16,10 +12,8 @@ import random
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, gro_file: str, traj_file: str, selection: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
-        self.gro_file = Path(gro_file)
-        self.traj_file = Path(traj_file)
-        self.selection = selection.strip()
+    def __init__(self, distmat_file: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
+        self.distmat_file = Path(distmat_file)
         self.chosen_struct = chosen_struct
         self.L = L
         
@@ -27,33 +21,7 @@ class KLProbabilities:
         self.struct_type = struct_type
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize MDAnalysis Universe
-        self.t = mda.Universe(str(self.gro_file), str(self.traj_file))
-        self.dist_matrix = None
-
-        # Validate selection
-        try:
-            selected_atoms = self.t.select_atoms(self.selection)
-            if len(selected_atoms) == 0:
-                raise ValueError(f"Selection '{self.selection}' did not match any atoms.")
-        except Exception as e:
-            raise ValueError(f"Selection error: {e}")
-
-    def rmsd_matrix(self) -> np.ndarray:
-        """
-        Align the trajectory with respect to the average structure and compute the diffusion matrix.
-        """
-        logging.info(f"Starting alignment for {self.chosen_struct}")
-        avg = align.AverageStructure(self.t, select=self.selection).run()
-        align.AlignTraj(self.t, avg.results.universe, select=self.selection, in_memory=True).run()
-        logging.info("Alignment completed.")
-
-        logging.info("Calculating diffusion matrix.")
-        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection).run().results.dist_matrix
-        print(self.dist_matrix)
-        np.savetxt(f"{self.chosen_struct}-{self.struct_type}-rmsd_diffmat.dat", self.dist_matrix)
-        
-        return self.dist_matrix
+        self.dist_matrix = np.load(self.distmat_file)
 
     def clustering(self, mat1: np.ndarray) -> np.ndarray:
         """
@@ -103,27 +71,12 @@ class KLProbabilities:
         logging.info(f"Selected frames saved to: {output_traj}")
 
         return label_probs
-    
-    def sns_plot(self, mat1: np.ndarray):
-        """
-        Generate and save an RMSD matrix heatmap.
-        """
-        if mat1.shape[0] > 500:
-            logging.warning("Matrix is large; consider downsampling for better visualization.")
-        
-        logging.info("Generating heatmap.")
-        sns.heatmap(mat1, cmap='inferno', cbar_kws={'label': 'RMSD (Angstrom)'})
-        plt.xlabel("Frames")
-        plt.ylabel("Frames")
-        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.chosen_struct}")
-        plt.savefig(self.save_dir / f"{self.struct_type}-{self.chosen_struct}-RMSD_matrix.png")
-        plt.close()
-        logging.info("Heatmap saved.")
 
     def savefile(self, microstates_probs: np.ndarray):
         """
-        Save microstate probabilities to a text file.
+        Save microstate probabilities to a text file, ensuring they sum to 1.
         """
+        microstates_probs /= np.sum(microstates_probs)  # Normalize probabilities to sum to 1
         output_file = self.save_dir / f"{self.struct_type}-{self.chosen_struct}_microst_p.txt"
         np.savetxt(output_file, microstates_probs, fmt="%.6f")
         logging.info(f"Microstate probabilities saved to {output_file}")
@@ -132,11 +85,8 @@ class KLProbabilities:
         """
         Execute the KL probabilities calculation pipeline.
         """
-        logging.info("Starting RMSD matrix calculation.")
-        dist_matrix = self.rmsd_matrix()
-        
         logging.info("Starting clustering.")
-        cl_labels = self.clustering(dist_matrix)
+        cl_labels = self.clustering(self.dist_matrix)
         microstates_probs = self.labeling(cl_labels)
         self.savefile(microstates_probs)
 
@@ -145,39 +95,31 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Perform KL clustering on molecular dynamics trajectories.")
     
-    parser.add_argument("-g", "--gro", required=True, type=str, help="Path to the GRO file.")
-    parser.add_argument("-x", "--xtc", required=True, type=str, help="Path to the XTC trajectory file.")
+    parser.add_argument("-m", "--dist_mat", required=True, type=str, help="Path to the distance matrix (.npy).")
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
     parser.add_argument("-t", "--struct_type", required=True, type=str, help="Structure type label.")
     parser.add_argument("-c", "--chosen_struct", required=True, type=str, help="Chosen structure name.")
-    parser.add_argument("-sel", "--selection", required=True, type=str, help="Selection string for atoms.")
     parser.add_argument("-l", "--clusters", required=True, type=int, help="Number of clusters (L).")
     
     args = parser.parse_args()
 
-    gro_file = Path(args.gro)
-    traj_file = Path(args.xtc)
+    dist_mat = Path(args.dist_mat)
     save_dir = Path(args.save_dir)
     struct_type = args.struct_type
     chosen_struct = args.chosen_struct
-    selection = args.selection
     L = args.clusters
 
-    if not gro_file.exists():
-        raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
-    if not traj_file.exists():
-        raise FileNotFoundError(f"The XTC file '{traj_file}' does not exist.")
+    if not dist_mat.exists():
+        raise FileNotFoundError(f"The distance matrix file '{dist_mat}' does not exist.")
 
     save_dir.mkdir(parents=True, exist_ok=True)
 
     klp = KLProbabilities(
-        gro_file=str(gro_file),
-        traj_file=str(traj_file),
-        selection=selection,
-        chosen_struct=chosen_struct,
-        L=L,
+        dist_mat=str(dist_mat),
         save_dir=str(save_dir),
-        struct_type=struct_type
+        struct_type=struct_type,
+        chosen_struct=chosen_struct,
+        L=L
     )
     
     klp.processing()
