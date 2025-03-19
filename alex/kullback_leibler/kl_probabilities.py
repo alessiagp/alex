@@ -68,6 +68,7 @@ class KLProbabilities:
         logging.info("Clustering completed.")
         return cl_labels
 
+
     def labeling(self, cl_labels: np.ndarray) -> np.ndarray:
         """
         Compute microstate probabilities based on clustering labels.
@@ -75,10 +76,6 @@ class KLProbabilities:
         """
         label_counts = Counter(cl_labels)
         total = sum(label_counts.values())
-        label_probs = np.array([label_counts[el] / total for el in cl_labels])
-
-        logging.info(f"Length of label_probs: {len(label_probs)}")
-        logging.info("Label probabilities computed.")
 
         # Select one random frame per cluster
         unique_classes = list(label_counts.keys())
@@ -87,8 +84,14 @@ class KLProbabilities:
         logging.info(f"Selected frames: {cl_selection}")
         logging.info(f"Number of selected frames: {len(cl_selection)}")
 
+        # Compute label probabilities AFTER selecting frames
+        label_probs = np.array([label_counts[class_label] / total for class_label in unique_classes])
+
+        logging.info(f"Length of label_probs: {len(label_probs)}")
+        logging.info("Label probabilities computed.")
+
         # Output file path
-        output_traj = self.save_dir / f"{self.struct_type}-{self.chosen_struct}-KL_frames.xtc"
+        output_traj = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}-KL_frames.xtc"
 
         # Ensure there are atoms before writing
         if len(self.t.atoms) == 0:
@@ -173,12 +176,11 @@ if __name__ == '__main__':
     klp = KLProbabilities(
         gro_file=str(gro_file),
         traj_file=str(traj_file),
-        selection=selection,
-        chosen_struct=chosen_struct,
-        L=L,
         save_dir=str(save_dir),
-        struct_type=struct_type
+        struct_type=struct_type,
+        chosen_struct=chosen_struct,
+        selection=selection,
+        L=L
     )
     
     klp.processing()
-
