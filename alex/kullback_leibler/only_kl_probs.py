@@ -6,14 +6,17 @@ from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 import os
 import sys
+import MDAnalysis as mda
 import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, distmat_file: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
-        self.distmat_file = Path(distmat_file)
+    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
+        self.dist_mat = Path(dist_mat)
+        self.gro_file = Path(gro_file)
+        self.traj_file = Path(traj_file)
         self.chosen_struct = chosen_struct
         self.L = L
         
@@ -21,7 +24,8 @@ class KLProbabilities:
         self.struct_type = struct_type
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        self.dist_matrix = np.load(self.distmat_file)
+        self.t = mda.Universe(str(self.gro_file), str(self.traj_file))
+        self.dist_matrix = np.load(self.dist_mat)
 
     def clustering(self, mat1: np.ndarray) -> np.ndarray:
         """
@@ -96,6 +100,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Perform KL clustering on molecular dynamics trajectories.")
     
     parser.add_argument("-m", "--dist_mat", required=True, type=str, help="Path to the distance matrix (.npy).")
+    parser.add_argument("-g", "--gro", required=True, type=str, help="Path to the GRO file.")
+    parser.add_argument("-x", "--xtc", required=True, type=str, help="Path to the XTC trajectory file.")
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
     parser.add_argument("-t", "--struct_type", required=True, type=str, help="Structure type label.")
     parser.add_argument("-c", "--chosen_struct", required=True, type=str, help="Chosen structure name.")
@@ -104,6 +110,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dist_mat = Path(args.dist_mat)
+    gro_file = Path(args.gro)
+    traj_file = Path(args.xtc)
     save_dir = Path(args.save_dir)
     struct_type = args.struct_type
     chosen_struct = args.chosen_struct
@@ -111,11 +119,17 @@ if __name__ == '__main__':
 
     if not dist_mat.exists():
         raise FileNotFoundError(f"The distance matrix file '{dist_mat}' does not exist.")
+    if not gro_file.exists():
+        raise FileNotFoundError(f"The GRO file '{gro_file}' does not exist.")
+    if not traj_file.exists():
+        raise FileNotFoundError(f"The XTC file '{traj_file}' does not exist.")
 
     save_dir.mkdir(parents=True, exist_ok=True)
 
     klp = KLProbabilities(
         dist_mat=str(dist_mat),
+        gro_file=str(gro_file),
+        traj_file=str(traj_file),
         save_dir=str(save_dir),
         struct_type=struct_type,
         chosen_struct=chosen_struct,
