@@ -13,7 +13,7 @@ import random
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, chosen_struct: str, L: int, save_dir: str, struct_type: str):
+    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, save_dir: str,  struct_type: str, chosen_struct: str, L: int):
         self.dist_mat = Path(dist_mat)
         self.gro_file = Path(gro_file)
         self.traj_file = Path(traj_file)
@@ -47,10 +47,6 @@ class KLProbabilities:
         """
         label_counts = Counter(cl_labels)
         total = sum(label_counts.values())
-        label_probs = np.array([label_counts[el] / total for el in cl_labels])
-
-        logging.info(f"Length of label_probs: {len(label_probs)}")
-        logging.info("Label probabilities computed.")
 
         # Select one random frame per cluster
         unique_classes = list(label_counts.keys())
@@ -58,6 +54,12 @@ class KLProbabilities:
 
         logging.info(f"Selected frames: {cl_selection}")
         logging.info(f"Number of selected frames: {len(cl_selection)}")
+
+        # Compute label probabilities AFTER selecting frames
+        label_probs = np.array([label_counts[class_label] / total for class_label in unique_classes])
+
+        logging.info(f"Length of label_probs: {len(label_probs)}")
+        logging.info("Label probabilities computed.")
 
         # Output file path
         output_traj = self.save_dir / f"{self.struct_type}-{self.chosen_struct}-KL_frames.xtc"
@@ -81,6 +83,7 @@ class KLProbabilities:
         Save microstate probabilities to a text file, ensuring they sum to 1.
         """
         microstates_probs /= np.sum(microstates_probs)  # Normalize probabilities to sum to 1
+        logging.info(f"Sum of microstate probabilities: {np.sum(microstates_probs)}")
         output_file = self.save_dir / f"{self.struct_type}-{self.chosen_struct}_microst_p.txt"
         np.savetxt(output_file, microstates_probs, fmt="%.6f")
         logging.info(f"Microstate probabilities saved to {output_file}")
