@@ -91,7 +91,7 @@ class KLProbabilities:
         logging.info("Label probabilities computed.")
 
         # Output file path
-        output_traj = self.save_dir / f"{self.save_prefix}-{self.chosen_struct}-KL_frames.xtc"
+        output_traj = self.save_dir / f"{self.struct_type}-{self.chosen_struct}-KL_frames.xtc"
 
         # Ensure there are atoms before writing
         if len(self.t.atoms) == 0:
