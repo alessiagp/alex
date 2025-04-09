@@ -1,1 +1,3 @@
-__all__ = ['retrieve_entropy', 'parser_probfile','writemaps', 'energy_xvg_to_txt']
+__all__ = ['parser_probfile','writemaps', 'energy_xvg_to_txt']
+
+
