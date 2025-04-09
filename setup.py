@@ -12,6 +12,6 @@ setup(
     'console_scripts': ['alex=alex.run:main']
     },
 
-   install_requires=['numpy', 'pandas', 'scipy', 'mdtraj', 'logging', 'random', 'MDAnalysis'], #external packages as dependencies
+   install_requires=['numpy', 'pandas', 'scipy', 'mdtraj', 'MDAnalysis'], #external packages as dependencies
    python_requires=">=3.12",
 )
