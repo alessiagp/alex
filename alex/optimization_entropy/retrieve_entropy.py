@@ -1,15 +1,18 @@
 from pathlib import Path
 import re
+import argparse
+from typing import Optional
 
 class SmapExtractor:
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, entropy_suffix: Optional[str] = None):
         """
-        Initialize the extractor with the target directory.
+        Initialize the extractor with the target directory and optional entropy output suffix.
         """
         self.directory = Path.cwd() / directory
         self.pattern = re.compile(r"SMAP=(\d+\.\d+)")
         self.all_smap_values = []
-        self.entropy_file: Path | None = None  # Will be assigned later
+        self.entropy_file: Path | None = None
+        self.entropy_suffix = entropy_suffix
 
         self._validate_directory()
 
@@ -44,10 +47,15 @@ class SmapExtractor:
     def write_to_entropy_file(self):
         """
         Write extracted SMAP values to the entropy file.
-        Creates a new entropy file if none exists.
+        Creates a new entropy file with optional custom name if none exists.
         """
         if not self.entropy_file:
-            self.entropy_file = self.directory / "ENTROPY_OUTPUT.txt"
+            filename = (
+                f"ENTROPY_{self.entropy_suffix}.txt"
+                if self.entropy_suffix
+                else "ENTROPY_OUTPUT.txt"
+            )
+            self.entropy_file = self.directory / filename
             print(f"No ENTROPY file found. Creating new file: {self.entropy_file.name}")
 
         try:
@@ -58,7 +66,19 @@ class SmapExtractor:
         except Exception as e:
             print(f"Error writing to file {self.entropy_file}: {e}")
 
-# This code is meant to be used like this:
-# extractor = SmapExtractor("optimize-results")
-# extractor.extract_smap_values()
-# extractor.write_to_entropy_file()
+
+    def main():
+        parser = argparse.ArgumentParser(description="Extract SMAP values and write to an ENTROPY file.")
+        parser.add_argument("filename", help="Suffix to create ENTROPY_<filename>.txt")
+        parser.add_argument(
+            "-d", "--directory", default="optimize-results",
+            help="Directory to scan for .dat and ENTROPY files (default: optimize-results)"
+        )
+        args = parser.parse_args()
+
+        extractor = SmapExtractor(directory=args.directory, entropy_suffix=args.filename)
+        extractor.extract_smap_values()
+        extractor.write_to_entropy_file()
+
+    if __name__ == "__main__":
+        main()
