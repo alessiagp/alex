@@ -186,7 +186,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Assess equilibration of MD trajectories.")
     
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
-    parser.add_argument("-m", "--membrane", required=True, type=str, help="Membrane label.")
+    parser.add_argument("-m", "--membrane", required=False, type=str, help="Membrane label.")
     parser.add_argument("-t", "--struct_type", required=True, type=str, help="Type of molecule name.")
     parser.add_argument("-a", "--analysis_mode", required=True, choices=['rmsd_mat', 'block'],
                         help="Choose 'rmsd_mat' for RMSD matrix, 'block' for block analysis.")
