@@ -46,22 +46,35 @@ class RMSDMatrixEquilibration(LoadFiles):
         except Exception as e:
             raise ValueError(f"Selection error: {e}")    
 
-    def calc_rmsd_matrix(self) -> np.ndarray:
+    def calc_rmsd_matrix(self, stride: int = None) -> np.ndarray:
         """
         Align the trajectory with respect to the average structure and compute the diffusion matrix.
+        
+        Parameters:
+        - stride: Optional. If None, it will be computed to target ~10,000 frames.
         """
-        logging.info(f"Starting alignment for {self.chosen_struct}")
-        avg = align.AverageStructure(self.t, select=self.selection).run()
-        align.AlignTraj(self.t, avg.results.universe, select=self.selection, in_memory=True).run()
+        if stride is None:
+            total_frames = len(self.t.trajectory)
+            stride = max(1, total_frames // 10000)
+            logging.info(f"Auto-calculated stride: {stride} for {total_frames} frames.")
+
+        logging.info(f"Starting alignment for {self.struct_type} with stride {stride}")
+
+        avg = align.AverageStructure(self.t, select=self.selection, step=stride).run()
+        align.AlignTraj(self.t, avg.results.universe, select=self.selection,
+                        in_memory=True, step=stride).run()
+
         logging.info("Alignment completed.")
 
-        logging.info("Calculating diffusion matrix.")
-        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection).run().results.dist_matrix
-        print(self.dist_matrix)
-        np.save(f"{self.chosen_struct}-{self.struct_type}-rmsd_diffmat.npy", self.dist_matrix)
-        
+        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection, step=stride)\
+                                            .run().results.dist_matrix
+
+        file_prefix = f"{self.membrane + '-' if self.membrane else ''}{self.struct_type}-rmsd_diffmat"
+        np.save(f"{file_prefix}.npy", self.dist_matrix)
+        logging.info(f"Saved RMSD diffusion matrix to {file_prefix}.npy")
+
         return self.dist_matrix
-    
+
     def sns_plot(self, mat1: np.ndarray):
         """
         Generate and save an RMSD matrix heatmap.
@@ -73,8 +86,8 @@ class RMSDMatrixEquilibration(LoadFiles):
         sns.heatmap(mat1, cmap='inferno', cbar_kws={'label': 'RMSD (Angstrom)'})
         plt.xlabel("Frames")
         plt.ylabel("Frames")
-        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.chosen_struct}")
-        plt.savefig(self.save_dir / f"{self.struct_type}-{self.chosen_struct}-RMSD_matrix.png")
+        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.struct_type}")
+        plt.savefig(self.save_dir / f"{self.struct_type}-{self.struct_type}-RMSD_matrix.png")
         plt.close()
         logging.info("Heatmap saved.")
 
@@ -211,7 +224,7 @@ if __name__ == '__main__':
             traj_file=args.xtc,
             selection=args.selection
         )
-        rmsd_mat.chosen_struct = args.membrane  # Needed for plotting title/path
+        rmsd_mat.struct_type = args.membrane  # Needed for plotting title/path
         rmsd_mat.struct_type = args.struct_type
         rmsd_mat.save_dir = Path(args.save_dir)
         rmsd_mat.use_rmsd_matrix()
