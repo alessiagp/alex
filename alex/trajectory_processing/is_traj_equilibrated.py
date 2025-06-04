@@ -46,7 +46,7 @@ class RMSDMatrixEquilibration(LoadFiles):
         except Exception as e:
             raise ValueError(f"Selection error: {e}")    
 
-    def _calc_rmsd_matrix(self) -> np.ndarray:
+    def calc_rmsd_matrix(self) -> np.ndarray:
         """
         Align the trajectory with respect to the average structure and compute the diffusion matrix.
         """
@@ -62,7 +62,7 @@ class RMSDMatrixEquilibration(LoadFiles):
         
         return self.dist_matrix
     
-    def _sns_plot(self, mat1: np.ndarray):
+    def sns_plot(self, mat1: np.ndarray):
         """
         Generate and save an RMSD matrix heatmap.
         """
@@ -83,7 +83,7 @@ class RMSDMatrixEquilibration(LoadFiles):
         Check whether the trajectory is equilibrated by looking at the RMSD matrix.
         """
         logging.info("Starting RMSD matrix calculation.")
-        dist_matrix = self.rmsd_matrix()
+        dist_matrix = self.calc_rmsd_matrix()
         
         logging.info("Calculation completed.")
         self.sns_plot(dist_matrix)
