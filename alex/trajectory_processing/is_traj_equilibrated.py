@@ -16,9 +16,9 @@ import random
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class LoadFiles:
-    def __init__(self, save_dir: str, membrane = None, struct_type = None, analysis_mode = 'rmsd_mat'):
+    def __init__(self, save_dir: str, membrane = None, struct_name = None, analysis_mode = 'rmsd_mat'):
         self.membrane = membrane
-        self.struct_type = struct_type #ligand
+        self.struct_name = struct_name #ligand
 
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -28,23 +28,26 @@ class LoadFiles:
 
 
 class RMSDMatrixEquilibration(LoadFiles):
-    def __init__(self, gro_file: str, traj_file: str, selection: str): 
-        self.analysis_mode = 'rmsd_mat'
+    def __init__(self, gro_file: str, traj_file: str, selection: str,
+                 save_dir: str, membrane: str = None, struct_name: str = None):
+        
+        super().__init__(save_dir=save_dir, membrane=membrane,
+                         struct_name=struct_name, analysis_mode='rmsd_mat')
+        
         self.gro_file = Path(gro_file)
         self.traj_file = Path(traj_file)
         self.selection = selection.strip()
 
-        # Initialize MDAnalysis Universe
         self.t = mda.Universe(str(self.gro_file), str(self.traj_file))
         self.dist_matrix = None
 
-        # Validate selection
         try:
             selected_atoms = self.t.select_atoms(self.selection)
             if len(selected_atoms) == 0:
                 raise ValueError(f"Selection '{self.selection}' did not match any atoms.")
         except Exception as e:
-            raise ValueError(f"Selection error: {e}")    
+            raise ValueError(f"Selection error: {e}")
+
 
     def calc_rmsd_matrix(self, stride: int = None) -> np.ndarray:
         """
@@ -53,12 +56,14 @@ class RMSDMatrixEquilibration(LoadFiles):
         Parameters:
         - stride: Optional. If None, it will be computed to target ~10,000 frames.
         """
-        if stride is None:
-            total_frames = len(self.t.trajectory)
+
+        total_frames = len(self.t.trajectory)
+
+        if stride is None and total_frames > 10000:
             stride = max(1, total_frames // 10000)
             logging.info(f"Auto-calculated stride: {stride} for {total_frames} frames.")
 
-        logging.info(f"Starting alignment for {self.struct_type} with stride {stride}")
+        logging.info(f"Starting alignment for {self.struct_name} with stride {stride}")
 
         avg = align.AverageStructure(self.t, select=self.selection, step=stride).run()
         align.AlignTraj(self.t, avg.results.universe, select=self.selection,
@@ -69,7 +74,7 @@ class RMSDMatrixEquilibration(LoadFiles):
         self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection, step=stride)\
                                             .run().results.dist_matrix
 
-        file_prefix = f"{self.membrane + '-' if self.membrane else ''}{self.struct_type}-rmsd_diffmat"
+        file_prefix = f"{self.membrane + '-' if self.membrane else ''}{self.struct_name}-rmsd_diffmat"
         np.save(f"{file_prefix}.npy", self.dist_matrix)
         logging.info(f"Saved RMSD diffusion matrix to {file_prefix}.npy")
 
@@ -83,11 +88,16 @@ class RMSDMatrixEquilibration(LoadFiles):
             logging.warning("Matrix is large; consider downsampling for better visualization.")
         
         logging.info("Generating heatmap.")
-        sns.heatmap(mat1, cmap='inferno', cbar_kws={'label': 'RMSD (Angstrom)'})
-        plt.xlabel("Frames")
-        plt.ylabel("Frames")
-        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.struct_type}")
-        plt.savefig(self.save_dir / f"{self.struct_type}-{self.struct_type}-RMSD_matrix.png")
+        fig, ax = plt.subplots(figsize=(10,8))
+        ax = sns.heatmap(mat1, cmap='inferno', cbar_kws={'label': 'RMSD (Angstrom)'})
+        ax.set_xlabel("Frames")
+        ax.set_ylabel("Frames")
+        if self.membrane:
+            plt.title(f"RMSD diffusion matrix for {self.membrane}-{self.struct_name}")
+            plt.savefig(self.save_dir / f"{self.membrane}-{self.struct_name}-RMSD_matrix.png", dpi=300, bbox_inches='tight')
+        else:
+            plt.title(f"RMSD diffusion matrix for {self.struct_name}")
+            plt.savefig(self.save_dir / f"{self.struct_name}-RMSD_matrix.png", dpi=300, bbox_inches='tight')
         plt.close()
         logging.info("Heatmap saved.")
 
@@ -200,7 +210,7 @@ if __name__ == '__main__':
     
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
     parser.add_argument("-m", "--membrane", required=False, type=str, help="Membrane label.")
-    parser.add_argument("-t", "--struct_type", required=True, type=str, help="Type of molecule name.")
+    parser.add_argument("-t", "--struct_name", required=True, type=str, help="Protein/molecule/ligand name.")
     parser.add_argument("-a", "--analysis_mode", required=True, choices=['rmsd_mat', 'block'],
                         help="Choose 'rmsd_mat' for RMSD matrix, 'block' for block analysis.")
 
@@ -222,12 +232,14 @@ if __name__ == '__main__':
         rmsd_mat = RMSDMatrixEquilibration(
             gro_file=args.gro,
             traj_file=args.xtc,
-            selection=args.selection
+            selection=args.selection,
+            save_dir=args.save_dir,
+            membrane=args.membrane,
+            struct_name=args.struct_name
         )
-        rmsd_mat.struct_type = args.membrane  # Needed for plotting title/path
-        rmsd_mat.struct_type = args.struct_type
-        rmsd_mat.save_dir = Path(args.save_dir)
+
         rmsd_mat.use_rmsd_matrix()
+
 
     elif args.analysis_mode == "block":
         if not all([args.block_data, args.chunk_length]):
