@@ -54,13 +54,13 @@ class RMSDMatrixEquilibration(LoadFiles):
         Align the trajectory with respect to the average structure and compute the diffusion matrix.
         
         Parameters:
-        - stride: Optional. If None, it will be computed to target ~10,000 frames.
+        - stride: Optional. If None, it will be computed to target ~5000 frames.
         """
 
         total_frames = len(self.t.trajectory)
 
-        if stride is None and total_frames > 10000:
-            stride = max(1, total_frames // 10000)
+        if stride is None and total_frames > 5000:
+            stride = max(1, total_frames // 5000)
             logging.info(f"Auto-calculated stride: {stride} for {total_frames} frames.")
 
         logging.info(f"Starting alignment for {self.struct_name} with stride {stride}")
