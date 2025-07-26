@@ -1,6 +1,7 @@
 import mdtraj as md
 import numpy as np
 from itertools import combinations
+from scipy.special import expit
 
 #------------------------------------------------------------------------------------------------#
 
@@ -52,5 +53,6 @@ def best_hummer_q(traj, native):
     # and recompute them for just the native state
     r0 = md.compute_distances(native[0], native_contacts)
     
-    q = np.mean(1.0 / (1 + np.exp(BETA_CONST * (r - LAMBDA_CONST * r0))), axis=1)
+    #q = np.mean(1.0 / (1 + np.exp(BETA_CONST * (r - LAMBDA_CONST * r0))), axis=1)
+    q = np.mean(expit(-BETA_CONST * (r - LAMBDA_CONST * r0)), axis=1)
     return q  
