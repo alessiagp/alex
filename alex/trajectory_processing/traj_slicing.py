@@ -26,23 +26,43 @@ def folded_unfolded_division(desired_traj, rmsd_threshold):
 
 def traj_pruning(sliced_part_traj, desired_N_frames):
     """
-    Function used to reduce the frame number from a given trajectory to be suitable for excogito optimisation.
-    It takes as input any trajectory loaded with MDtraj in the format `.xtc`, and the number of frames.
-    The function returns the pruned trajectory, removing frames with a stride equal to the ratio between the total number of frames and the desired number of frames.
-    If the trajectory length is already smaller than the desired number of frames, then the same unpruned trajectory is returned.
+    Reduce the number of frames in an MDtraj trajectory to exactly desired_N_frames.
+
+    Parameters
+    ----------
+    sliced_part_traj : mdtraj.Trajectory
+        The input trajectory.
+    desired_N_frames : int
+        Target number of frames after pruning.
+
+    Returns
+    -------
+    reduced_traj : mdtraj.Trajectory
+        The pruned trajectory. If the input has fewer frames than desired_N_frames,
+        the original trajectory is returned unchanged.
     """
     tot_frames = len(sliced_part_traj)
-    print(f"Tot frames in the current trajectory: {tot_frames}")
+    print(f"Total frames in the current trajectory: {tot_frames}")
+
     if tot_frames > desired_N_frames:
-        stride = tot_frames / desired_N_frames
-        print(f"Stride: {stride}")
-        frame_ndx = np.arange(0, tot_frames, stride)
-        frame_ndx=frame_ndx.astype(int)
+        # Create evenly spaced indices, always exactly desired_N_frames
+        frame_ndx = np.round(
+            np.linspace(0, tot_frames - 1, desired_N_frames)
+        ).astype(int)
+
+        # Safety check: remove duplicates if rounding causes overlaps
+        frame_ndx = np.unique(frame_ndx)
+
+        # If we lost some frames due to duplicates, add extras from the end
+        while len(frame_ndx) < desired_N_frames:
+            frame_ndx = np.append(frame_ndx, tot_frames - 1)
+            frame_ndx = np.unique(frame_ndx)
+
         reduced_traj = sliced_part_traj[frame_ndx]
-        print(f"Length of new trajectory: {len(reduced_traj)}")
+        print(f"Reduced trajectory length: {len(reduced_traj)}")
         return reduced_traj
     else:
-        print(f"Your trajectory already satisfies the number of frames: {tot_frames} < 10000")
+        print(f"Trajectory already has {tot_frames} frames, which is ≤ desired {desired_N_frames}.")
         return sliced_part_traj
 
 #------------------------------------------------------------------------------------------------#
