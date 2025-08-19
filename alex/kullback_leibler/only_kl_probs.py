@@ -13,11 +13,11 @@ import random
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, save_dir: str,  struct_type: str, chosen_struct: str, L: int):
+    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, save_dir: str,  struct_type: str, struct: str, L: int):
         self.dist_mat = Path(dist_mat)
         self.gro_file = Path(gro_file)
         self.traj_file = Path(traj_file)
-        self.chosen_struct = chosen_struct
+        self.struct = struct
         self.L = L
         
         self.save_dir = Path(save_dir)
@@ -62,7 +62,7 @@ class KLProbabilities:
         logging.info("Label probabilities computed.")
 
         # Output file path
-        output_traj = self.save_dir / f"{self.struct_type}-{self.chosen_struct}-KL_frames.xtc"
+        output_traj = self.save_dir / f"{self.struct}-{self.struct_type}-KL_frames.xtc"
 
         # Ensure there are atoms before writing
         if len(self.t.atoms) == 0:
@@ -84,7 +84,7 @@ class KLProbabilities:
         """
         microstates_probs /= np.sum(microstates_probs)  # Normalize probabilities to sum to 1
         logging.info(f"Sum of microstate probabilities: {np.sum(microstates_probs)}")
-        output_file = self.save_dir / f"{self.struct_type}-{self.chosen_struct}_microst_p.txt"
+        output_file = self.save_dir / f"{self.struct}-{self.struct_type}_microst_p.txt"
         np.savetxt(output_file, microstates_probs, fmt="%.6f")
         logging.info(f"Microstate probabilities saved to {output_file}")
 
@@ -106,8 +106,8 @@ if __name__ == '__main__':
     parser.add_argument("-g", "--gro", required=True, type=str, help="Path to the GRO file.")
     parser.add_argument("-x", "--xtc", required=True, type=str, help="Path to the XTC trajectory file.")
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
-    parser.add_argument("-t", "--struct_type", required=True, type=str, help="Structure type label.")
-    parser.add_argument("-c", "--chosen_struct", required=True, type=str, help="Chosen structure name.")
+    parser.add_argument("-c", "--struct", required=True, type=str, help="Molecule name.")
+    parser.add_argument("-t", "--struct_type", required=True, type=str, help="Type of the structure (e.g. apo or name of ligand for holo).")
     parser.add_argument("-l", "--clusters", required=True, type=int, help="Number of clusters (L).")
     
     args = parser.parse_args()
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     traj_file = Path(args.xtc)
     save_dir = Path(args.save_dir)
     struct_type = args.struct_type
-    chosen_struct = args.chosen_struct
+    struct = args.struct
     L = args.clusters
 
     if not dist_mat.exists():
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         traj_file=str(traj_file),
         save_dir=str(save_dir),
         struct_type=struct_type,
-        chosen_struct=chosen_struct,
+        struct=struct,
         L=L
     )
     
