@@ -36,6 +36,18 @@ class MutualInformation:
         self.cache_dir = os.path.join(self.save_dir, "CACHE")
         self.results_dir = os.path.join(self.save_dir, "RESULTS", "correlations")
 
+    def initialise_system(self, selection_1='protein and name CA', selection_2='protein', initial=0, final=-1): 
+        try: 
+            logging.info("Initializing the molecular system...") 
+            self.mds.set_num_replicas(self.n_replicas) 
+            self.mds.load_system(self.structure_file, self.trajectory_list) 
+            self.mds.align_traj(inmem=True, selection=self.selection) 
+            self.mds.set_selection(selection_1, selection_2) 
+            self.mds.stride_trajectory(initial=initial, final=final, step=self.stride) 
+            logging.info("System initialized successfully.") 
+        except Exception as e: 
+            logging.error(f"Failed to initialize the system: {e}") 
+            raise
 
     def correlations(self):
         """
