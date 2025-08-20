@@ -71,8 +71,7 @@ class RMSDMatrixEquilibration(LoadFiles):
 
         logging.info("Alignment completed.")
 
-        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection, step=stride)\
-                                            .run().results.dist_matrix
+        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection, step=stride).run().results.dist_matrix
 
         file_prefix = f"{self.membrane + '-' if self.membrane else ''}{self.struct_name}-rmsd_diffmat"
         np.save(f"{file_prefix}.npy", self.dist_matrix)
