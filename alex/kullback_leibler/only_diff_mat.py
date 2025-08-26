@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import logging
 from pathlib import Path
 import MDAnalysis as mda
@@ -11,13 +9,24 @@ import argparse
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+
 class KLProbabilities:
-    def __init__(self, gro_file: str, traj_file: str, selection: str, struct: str, save_dir: str, struct_type: str):
+    def __init__(
+        self,
+        gro_file: str,
+        traj_file: str,
+        selection: str,
+        struct: str,
+        save_dir: str,
+        struct_type: str,
+        stride: int = 1,
+    ):
         self.gro_file = Path(gro_file)
         self.traj_file = Path(traj_file)
         self.selection = selection.strip()
         self.struct = struct
         self.struct_type = struct_type
+        self.stride = stride
         
         self.save_dir = Path(save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -36,48 +45,40 @@ class KLProbabilities:
 
     def rmsd_matrix(self) -> np.ndarray:
         """
-        Align the trajectory with respect to the average structure and compute the pairwise distance matrix.
+        Align trajectory w.r.t. average structure and compute pairwise RMSD distance matrix.
+        Stride controls how many frames are skipped (e.g. stride=10 means every 10th frame).
         """
-        logging.info(f"Starting alignment for {self.struct}")
-        avg = align.AverageStructure(self.t, select=self.selection).run()
-        align.AlignTraj(self.t, avg.results.universe, select=self.selection, in_memory=True).run()
+        logging.info(f"Starting alignment for {self.struct} with stride={self.stride}")
+        
+        # Build average structure with stride
+        avg = align.AverageStructure(self.t, select=self.selection, step=self.stride).run()
+        align.AlignTraj(
+            self.t,
+            avg.results.universe,
+            select=self.selection,
+            in_memory=True,
+            step=self.stride
+        ).run()
         logging.info("Alignment completed.")
 
+        # Compute distance matrix with stride
         logging.info("Calculating pairwise distance matrix.")
-        self.dist_matrix = diffusionmap.DistanceMatrix(self.t, select=self.selection).run().results.dist_matrix
+        self.dist_matrix = diffusionmap.DistanceMatrix(
+            self.t, select=self.selection, step=self.stride
+        ).run().results.dist_matrix
 
-        out_file = self.save_dir / f"{self.struct}-{self.struct_type}-RMSD_matrix.npy"
+        out_file = self.save_dir / f"{self.struct_type}-{self.struct}-RMSD_matrix_stride{self.stride}.npy"
         np.save(out_file, self.dist_matrix)
         logging.info(f"Distance matrix saved to {out_file}")
 
         return self.dist_matrix
-
-    def sns_plot(self, mat1: np.ndarray):
-        """
-        Generate and save an RMSD matrix heatmap.
-        """
-        if mat1.shape[0] > 500:
-            logging.warning("Matrix is large; consider downsampling for better visualization.")
-        
-        logging.info("Generating heatmap.")
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(mat1, cmap="inferno", cbar_kws={"label": "RMSD (Å)"})
-        plt.xlabel("Frames")
-        plt.ylabel("Frames")
-        plt.title(f"RMSD diffusion matrix for {self.struct_type} {self.struct}")
-
-        out_png = self.save_dir / f"{self.struct}-{self.struct_type}-RMSD_matrix.png"
-        plt.savefig(out_png, dpi=300, bbox_inches="tight")
-        plt.close()
-        logging.info(f"Heatmap saved to {out_png}")
 
     def processing(self):
         """
         Execute the KL probabilities calculation pipeline.
         """
         logging.info("Starting RMSD matrix calculation.")
-        dist_matrix = self.rmsd_matrix()
-        self.sns_plot(dist_matrix)
+        self.rmsd_matrix()
 
 
 if __name__ == '__main__':
@@ -87,8 +88,9 @@ if __name__ == '__main__':
     parser.add_argument("-x", "--xtc", required=True, type=str, help="Path to the XTC trajectory file.")
     parser.add_argument("-s", "--save_dir", required=True, type=str, help="Directory to save outputs.")
     parser.add_argument("-c", "--struct", required=True, type=str, help="Molecule name.")
-    parser.add_argument("-st", "--struct_type", required=True, type=str, help="Type of the structure (e.g. apo or name of ligand for holo).")
+    parser.add_argument("-st", "--struct_type", required=True, type=str, help="Type of the structure (e.g. holo/apo).")
     parser.add_argument("-sel", "--selection", required=True, type=str, help="Selection string for atoms.")
+    parser.add_argument("--stride", type=int, default=1, help="Stride for trajectory frames (default=1).")
     
     args = parser.parse_args()
 
@@ -110,6 +112,7 @@ if __name__ == '__main__':
         struct_type=args.struct_type,
         struct=args.struct,
         selection=args.selection,
+        stride=args.stride,
     )
     
     klp.processing()
