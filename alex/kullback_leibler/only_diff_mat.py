@@ -4,7 +4,7 @@ from pathlib import Path
 import MDAnalysis as mda
 from MDAnalysis.analysis import diffusionmap, align
 import argparse
-
+from scipy.spatial.distance import squareform
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -61,17 +61,19 @@ class KLProbabilities:
         ).run()
         logging.info("Alignment completed.")
 
+
         # Compute distance matrix with stride
         logging.info("Calculating pairwise distance matrix.")
-        self.dist_matrix = diffusionmap.DistanceMatrix(
+        full_matrix = diffusionmap.DistanceMatrix(
             self.t, select=self.selection, step=self.stride
         ).run().results.dist_matrix
 
-        out_file = self.save_dir / f"{self.struct_type}-{self.struct}-RMSD_matrix_stride{self.stride}.npy"
-        np.save(out_file, self.dist_matrix)
-        logging.info(f"Distance matrix saved to {out_file}")
+        # Convert to condensed form (1D array of size N*(N-1)/2)
+        condensed = squareform(full_matrix, force='tovector', checks=False)
 
-        return self.dist_matrix
+        out_file = self.save_dir / f"{self.struct_type}-{self.struct}-RMSD_matrix_stride{self.stride}_condensed.npy"
+        np.save(out_file, condensed)
+        logging.info(f"Condensed distance matrix saved to {out_file} (length={condensed.shape[0]})")
 
     def processing(self):
         """
