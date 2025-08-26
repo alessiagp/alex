@@ -8,6 +8,8 @@ import os
 import sys
 import MDAnalysis as mda
 import random
+from scipy.spatial.distance import squareform
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -25,17 +27,21 @@ class KLProbabilities:
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
         self.t = mda.Universe(str(self.gro_file), str(self.traj_file))
-        self.dist_matrix = np.load(self.dist_mat)
-
-    def clustering(self, mat1: np.ndarray) -> np.ndarray:
+    
+    def load_matrix(self):
         """
-        Perform clustering on the RMSD matrix.
+        Load the distance matrix in the condensed form.
         """
-        if mat1.shape[0] != mat1.shape[1]:
-            raise ValueError("Distance matrix must be square for clustering.")
+        condensed = np.load(self.dist_mat)
+        return condensed  # keep condensed, no squareform here
 
+
+    def clustering(self, condensed: np.ndarray) -> np.ndarray:
+        """
+        Perform clustering on the RMSD condensed distance matrix.
+        """
         logging.info("Starting clustering.")
-        Z1 = linkage(squareform(mat1), method='average')
+        Z1 = linkage(condensed, method='average')  # directly use condensed form
         cl_labels = fcluster(Z1, t=self.L, criterion='maxclust')
         logging.info("Clustering completed.")
         return cl_labels
@@ -92,8 +98,10 @@ class KLProbabilities:
         """
         Execute the KL probabilities calculation pipeline.
         """
+        logging.info("Loading the distance matrix.")
+        condensed=self.load_matrix()
         logging.info("Starting clustering.")
-        cl_labels = self.clustering(self.dist_matrix)
+        cl_labels = self.clustering(condensed)
         microstates_probs = self.labeling(cl_labels)
         self.savefile(microstates_probs)
 
