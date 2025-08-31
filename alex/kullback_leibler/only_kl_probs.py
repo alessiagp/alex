@@ -3,28 +3,31 @@ import logging
 from pathlib import Path
 from collections import Counter
 from scipy.cluster.hierarchy import linkage, fcluster
-from scipy.spatial.distance import squareform
 import os
 import sys
 import MDAnalysis as mda
 import random
-from scipy.spatial.distance import squareform
-
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class KLProbabilities:
-    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, save_dir: str,  struct_type: str, struct: str, L: int):
+    def __init__(self, dist_mat: str, gro_file: str, traj_file: str, save_dir: str,  
+                 struct_type: str, struct: str, L: int, seed: int = 42):
         self.dist_mat = Path(dist_mat)
         self.gro_file = Path(gro_file)
         self.traj_file = Path(traj_file)
         self.struct = struct
         self.L = L
+        self.seed = seed
         
         self.save_dir = Path(save_dir)
         self.struct_type = struct_type
         self.save_dir.mkdir(parents=True, exist_ok=True)
+
+        # set seeds for reproducibility
+        random.seed(self.seed)
+        np.random.seed(self.seed)
 
         self.t = mda.Universe(str(self.gro_file), str(self.traj_file))
     
@@ -35,7 +38,6 @@ class KLProbabilities:
         condensed = np.load(self.dist_mat)
         return condensed  # keep condensed, no squareform here
 
-
     def clustering(self, condensed: np.ndarray) -> np.ndarray:
         """
         Perform clustering on the RMSD condensed distance matrix.
@@ -43,6 +45,9 @@ class KLProbabilities:
         logging.info("Starting clustering.")
         Z1 = linkage(condensed, method='average')  # directly use condensed form
         cl_labels = fcluster(Z1, t=self.L, criterion='maxclust')
+        n_clusters = len(set(cl_labels))
+        if n_clusters < self.L:
+            logging.warning(f"Requested {self.L} clusters, but only {n_clusters} were found.")
         logging.info("Clustering completed.")
         return cl_labels
 
@@ -54,9 +59,14 @@ class KLProbabilities:
         label_counts = Counter(cl_labels)
         total = sum(label_counts.values())
 
+        # Sort cluster labels for consistency
+        unique_classes = sorted(label_counts.keys())
+
         # Select one random frame per cluster
-        unique_classes = list(label_counts.keys())
-        cl_selection = np.array([random.choice(np.where(cl_labels == class_label)[0]) for class_label in unique_classes])
+        cl_selection = np.array([
+            random.choice(np.where(cl_labels == class_label)[0]) 
+            for class_label in unique_classes
+        ])
 
         logging.info(f"Selected frames: {cl_selection}")
         logging.info(f"Number of selected frames: {len(cl_selection)}")
@@ -82,16 +92,18 @@ class KLProbabilities:
 
         logging.info(f"Selected frames saved to: {output_traj}")
 
-        return label_probs
+        return unique_classes, label_probs
 
-    def savefile(self, microstates_probs: np.ndarray):
+    def savefile(self, unique_classes: np.ndarray, microstates_probs: np.ndarray):
         """
-        Save microstate probabilities to a text file, ensuring they sum to 1.
+        Save microstate probabilities with cluster IDs to a text file.
         """
-        microstates_probs /= np.sum(microstates_probs)  # Normalize probabilities to sum to 1
+        microstates_probs /= np.sum(microstates_probs)  # Normalize
         logging.info(f"Sum of microstate probabilities: {np.sum(microstates_probs)}")
+
         output_file = self.save_dir / f"{self.struct}-{self.struct_type}_microst_p.txt"
-        np.savetxt(output_file, microstates_probs, fmt="%.6f")
+        np.savetxt(output_file, np.c_[unique_classes, microstates_probs], fmt=["%d", "%.6f"],
+                   header="ClusterID Probability")
         logging.info(f"Microstate probabilities saved to {output_file}")
 
     def processing(self):
@@ -102,8 +114,8 @@ class KLProbabilities:
         condensed=self.load_matrix()
         logging.info("Starting clustering.")
         cl_labels = self.clustering(condensed)
-        microstates_probs = self.labeling(cl_labels)
-        self.savefile(microstates_probs)
+        unique_classes, microstates_probs = self.labeling(cl_labels)
+        self.savefile(unique_classes, microstates_probs)
 
 import argparse
 
@@ -117,6 +129,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--struct", required=True, type=str, help="Molecule name.")
     parser.add_argument("-t", "--struct_type", required=True, type=str, help="Type of the structure (e.g. apo or name of ligand for holo).")
     parser.add_argument("-l", "--clusters", required=True, type=int, help="Number of clusters (L).")
+    parser.add_argument("--seed", required=False, type=int, default=42, help="Random seed for reproducibility.")
     
     args = parser.parse_args()
 
@@ -127,6 +140,7 @@ if __name__ == '__main__':
     struct_type = args.struct_type
     struct = args.struct
     L = args.clusters
+    seed = args.seed
 
     if not dist_mat.exists():
         raise FileNotFoundError(f"The distance matrix file '{dist_mat}' does not exist.")
@@ -144,8 +158,8 @@ if __name__ == '__main__':
         save_dir=str(save_dir),
         struct_type=struct_type,
         struct=struct,
-        L=L
+        L=L,
+        seed=seed
     )
     
     klp.processing()
-
