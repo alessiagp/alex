@@ -71,7 +71,7 @@ class KLProbabilities:
         logging.info(f"Selected frames: {cl_selection}")
         logging.info(f"Number of selected frames: {len(cl_selection)}")
 
-        # Compute label probabilities AFTER selecting frames
+        # Compute label probabilities
         label_probs = np.array([label_counts[class_label] / total for class_label in unique_classes])
 
         logging.info(f"Length of label_probs: {len(label_probs)}")
@@ -92,18 +92,17 @@ class KLProbabilities:
 
         logging.info(f"Selected frames saved to: {output_traj}")
 
-        return unique_classes, label_probs
+        return label_probs
 
-    def savefile(self, unique_classes: np.ndarray, microstates_probs: np.ndarray):
+    def savefile(self, microstates_probs: np.ndarray):
         """
-        Save microstate probabilities with cluster IDs to a text file.
+        Save only microstate probabilities to a text file (one per line).
         """
         microstates_probs /= np.sum(microstates_probs)  # Normalize
         logging.info(f"Sum of microstate probabilities: {np.sum(microstates_probs)}")
 
         output_file = self.save_dir / f"{self.struct}-{self.struct_type}_microst_p.txt"
-        np.savetxt(output_file, np.c_[unique_classes, microstates_probs], fmt=["%d", "%.6f"],
-                   header="ClusterID Probability")
+        np.savetxt(output_file, microstates_probs, fmt="%.6f")
         logging.info(f"Microstate probabilities saved to {output_file}")
 
     def processing(self):
@@ -111,11 +110,11 @@ class KLProbabilities:
         Execute the KL probabilities calculation pipeline.
         """
         logging.info("Loading the distance matrix.")
-        condensed=self.load_matrix()
+        condensed = self.load_matrix()
         logging.info("Starting clustering.")
         cl_labels = self.clustering(condensed)
-        unique_classes, microstates_probs = self.labeling(cl_labels)
-        self.savefile(unique_classes, microstates_probs)
+        microstates_probs = self.labeling(cl_labels)
+        self.savefile(microstates_probs)
 
 import argparse
 
