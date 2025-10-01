@@ -20,7 +20,7 @@ class MutualInfo():
             parent : str,
             sr : str,
             lig : str,
-            moltype : str,
+            moltype : str
     ):
         self.parent = Path(parent)
         self.currdir = f'{parent}/{sr}/{moltype}_MI_procedure'
