@@ -18,11 +18,13 @@ class MutualInfo():
     def __init__(
             self,
             parent : str,
+            corr : list,
             sr : str,
             lig : str,
             moltype : str
     ):
         self.parent = Path(parent)
+        self.corr = corr
         self.currdir = f'{parent}/{sr}/{moltype}_MI_procedure'
         self.sr = sr
         self.lig = lig
@@ -44,49 +46,50 @@ class MutualInfo():
         """
         logging.info(f"Loading {self.moltype} {self.sr} system")
         mds = MDS()
-        mds.set_num_replicas(1) # use 2 if you have 2 replicas.
+        mds.set_num_replicas(1)
         mds.load_system(self.topology, self.trajectory)
         mds.align_traj(inmem=True, selection='name CA')
         mds.set_selection('protein and name CA', 'protein')
         mds.stride_trajectory(initial=0, final=-1, step=1)
 
+        if "dyncorr" in self.corr:
+            # correlation from CA displacements 
+            logging.info(f"Compute correlation from CA displacements for {self.moltype} {self.sr} system")
+            dyncorr = DynCorr(mds)
+            dyncorr.parse_dynamics(scale=True, normalize=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, VERBOSE=True, COV_DISP=True)
+            dyncorr.save_class(file_name_root=f'{self.savedir}/dyncorr')
 
-        # correlation from CA displacements 
-        logging.info(f"Compute correlation from CA displacements for {self.moltype} {self.sr} system")
-        dyncorr = DynCorr(mds)
-        dyncorr.parse_dynamics(scale=True, normalize=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, VERBOSE=True, COV_DISP=True)
+        if "dih" in self.corr:
+            # compute correlation from dihedral fluctuations
+            logging.info(f"Compute correlation from dihedral fluctuations for {self.moltype} {self.sr} system")
+            dihdyncorr = DihDynCorr(mds)
+            dihdyncorr.parse_dih_dynamics(mean_center=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, COV_DISP=True)
+            dihdyncorr.save_class(file_name_root=f'{self.savedir}/dih')
 
-        # compute correlation from dihedral fluctuations
-        logging.info(f"Compute correlation from dihedral fluctuations for {self.moltype} {self.sr} system")
-        dihdyncorr = DihDynCorr(mds)
-        dihdyncorr.parse_dih_dynamics(mean_center=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, COV_DISP=True)
+        if "KS" in self.corr:
+            # Kabsch-Sander analysis for correlation of electrostatic interactions
+            logging.info(f"Compute Kabsch-Sander analysis for correlation of electrostatic interactions for {self.moltype} {self.sr} system")        
+            KS = KS_Energy(mds)
+            # select backbone atoms
+            KS.set_selection(['protein and backbone and name N','protein and backbone and name O',
+                            'protein and backbone and name C','protein and name H'], system_selstr='protein')
+            # set indices according to atom name selection
+            KS.set_backbone_dictionary({'N-Backbone':'N',
+                                        'O-Backbone':'O',
+                                        'C-Backbone':'C',
+                                        'CA-Backbone':'CA',
+                                        'H-Backbone':'H'})
 
-        # Kabsch-Sander analysis for correlation of electrostatic interactions
-        logging.info(f"Compute Kabsch-Sander analysis for correlation of electrostatic interactions for {self.moltype} {self.sr} system")        
-        KS = KS_Energy(mds)
-        # select backbone atoms
-        KS.set_selection(['protein and backbone and name N','protein and backbone and name O',
-                        'protein and backbone and name C','protein and name H'], system_selstr='protein')
-        # set indices according to atom name selection
-        KS.set_backbone_dictionary({'N-Backbone':'N',
-                                    'O-Backbone':'O',
-                                    'C-Backbone':'C',
-                                    'CA-Backbone':'CA',
-                                    'H-Backbone':'H'})
-
-        KS.KS_pipeline(topology_charges=False, MI="knn_5_2", covariance=True, correction=True)
-        KS.compute_EEC(distance_matrix=None, loc_factor=None, don_acc=True)
-
-
-        # save objects to file for later use
-        dyncorr.save_class(file_name_root=f'{self.savedir}/dyncorr')
-        KS.save_class(file_name_root=f'{self.savedir}/KS', save_space=True)
-        dihdyncorr.save_class(file_name_root=f'{self.savedir}/dih')
+            KS.KS_pipeline(topology_charges=False, MI="knn_5_2", covariance=True, correction=True)
+            KS.compute_EEC(distance_matrix=None, loc_factor=None, don_acc=True)
+            KS.save_class(file_name_root=f'{self.savedir}/KS', save_space=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate MI using dyncorr, dihcorr, electrostatic interactions.")
 
     parser.add_argument("-p", "--parent", required=True, type=str, help="Path of parent folder (main SR folder)")
+    parser.add_argument("-c", "--corr", required=True, nargs="+", choices=["dyncorr", "dih", "KS"], default=["dyncorr", "dih", "KS"], 
+                        help="Types of correlations to be calculated")    
     parser.add_argument("-s", "--sr", required=True, type=str, help="Desired steroid receptor")
     parser.add_argument("-l", "--lig", required=True, type=str, help="Corresponding ligand")
     parser.add_argument("-t","--moltype", required=True, type=str, help="Type of molecule (apo or ligand)")
@@ -100,6 +103,7 @@ if __name__ == "__main__":
 
     mi = MutualInfo(
         parent=str(parent),
+        corr=args.corr,
         sr = args.sr,
         lig=args.lig,
         moltype=args.moltype
