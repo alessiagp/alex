@@ -1,1 +1,1 @@
-__all__=['generate_mi_params', 'mutual_info', 'parse_mi_params']
+__all__=['mutual_info']
