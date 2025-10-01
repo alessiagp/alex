@@ -85,10 +85,10 @@ class MutualInfo():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate MI using dyncorr, dihcorr, electrostatic interactions.")
 
-    parser.add_argument("-p", "--parent", required=True, moltype=str, help="Path of parent folder (main SR folder)")
-    parser.add_argument("-s", "--sr", required=True, moltype=str, help="Desired steroid receptor")
-    parser.add_argument("-l", "--lig", required=True, moltype=str, help="Corresponding ligand")
-    parser.add_argument("-t","--moltype", required=True, help="Type of molecule (apo or ligand)")
+    parser.add_argument("-p", "--parent", required=True, type=str, help="Path of parent folder (main SR folder)")
+    parser.add_argument("-s", "--sr", required=True, type=str, help="Desired steroid receptor")
+    parser.add_argument("-l", "--lig", required=True, type=str, help="Corresponding ligand")
+    parser.add_argument("-t","--moltype", required=True, type=str, help="Type of molecule (apo or ligand)")
 
     args = parser.parse_args()
 
