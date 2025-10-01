@@ -44,6 +44,7 @@ class MutualInfo():
         """
         logging.info(f"Loading {self.moltype} {self.sr} system")
         mds = MDS()
+        mds.set_num_replicas(1) # use 2 if you have 2 replicas.
         mds.load_system(self.topology, self.trajectory)
         mds.align_traj(inmem=True, selection='name CA')
         mds.set_selection('protein and name CA', 'protein')
