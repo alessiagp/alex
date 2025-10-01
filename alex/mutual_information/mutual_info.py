@@ -20,20 +20,20 @@ class MutualInfo():
             parent : str,
             sr : str,
             lig : str,
-            type : str,
+            moltype : str,
     ):
         self.parent = Path(parent)
-        self.currdir = f'{parent}/{sr}/{type}_MI_procedure'
+        self.currdir = f'{parent}/{sr}/{moltype}_MI_procedure'
         self.sr = sr
         self.lig = lig
-        self.type = type
+        self.moltype = moltype
 
-        if type == "apo":
-            self.topology     = f"{parent}/../{type}_MDSimulations/50-final-MD-data/md_final_noH2O.gro"
-            self.trajectory   = f"{parent}/../{type}_MDSimulations/50-final-MD-data/md_cut_aligned_noH2O.xtc"
-        elif type == "ligand":
-            self.topology     = f"{parent}/../{type}_MDSimulations/50-final-MD-data/md_{lig}_final_noH2O.gro"
-            self.trajectory   = f"{parent}/../{type}_MDSimulations/50-final-MD-data/md_{lig}_final_aligned_noH2O.xtc"
+        if moltype == "apo":
+            self.topology     = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_final_noH2O.gro"
+            self.trajectory   = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_cut_aligned_noH2O.xtc"
+        elif moltype == "ligand":
+            self.topology     = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_noH2O.gro"
+            self.trajectory   = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_aligned_noH2O.xtc"
 
         self.savedir = f'{self.currdir}/CACHE'
         mdigest.core.toolkit.folder_exists(self.savedir)
@@ -42,7 +42,7 @@ class MutualInfo():
         """
         Calculate MI with dynamic correlations, dihedral correlations and electrostatic interactions.
         """
-        logging.info(f"Loading {type} {sr} system")
+        logging.info(f"Loading {self.moltype} {self.sr} system")
         mds = MDS()
         mds.load_system(self.topology, self.trajectory)
         mds.align_traj(inmem=True, selection='name CA')
@@ -51,17 +51,17 @@ class MutualInfo():
 
 
         # correlation from CA displacements 
-        logging.info(f"Compute correlation from CA displacements for {type} {sr} system")
+        logging.info(f"Compute correlation from CA displacements for {self.moltype} {self.sr} system")
         dyncorr = DynCorr(mds)
         dyncorr.parse_dynamics(scale=True, normalize=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, VERBOSE=True, COV_DISP=True)
 
         # compute correlation from dihedral fluctuations
-        logging.info(f"Compute correlation from dihedral fluctuations for {type} {sr} system")
+        logging.info(f"Compute correlation from dihedral fluctuations for {self.moltype} {self.sr} system")
         dihdyncorr = DihDynCorr(mds)
         dihdyncorr.parse_dih_dynamics(mean_center=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, COV_DISP=True)
 
         # Kabsch-Sander analysis for correlation of electrostatic interactions
-        logging.info(f"Compute Kabsch-Sander analysis for correlation of electrostatic interactions for {type} {sr} system")        
+        logging.info(f"Compute Kabsch-Sander analysis for correlation of electrostatic interactions for {self.moltype} {self.sr} system")        
         KS = KS_Energy(mds)
         # select backbone atoms
         KS.set_selection(['protein and backbone and name N','protein and backbone and name O',
@@ -85,23 +85,23 @@ class MutualInfo():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate MI using dyncorr, dihcorr, electrostatic interactions.")
 
-    parser.add_argument("-p", "--parent", required=True, type=str, help="Path of parent folder (main SR folder)")
-    parser.add_argument("-s", "--sr", required=True, type=str, help="Desired steroid receptor")
-    parser.add_argument("-l", "--lig", required=True, type=str, help="Corresponding ligand")
-    parser.add_argument("-t","--type", required=True, help="Type of molecule (apo or ligand)")
+    parser.add_argument("-p", "--parent", required=True, moltype=str, help="Path of parent folder (main SR folder)")
+    parser.add_argument("-s", "--sr", required=True, moltype=str, help="Desired steroid receptor")
+    parser.add_argument("-l", "--lig", required=True, moltype=str, help="Corresponding ligand")
+    parser.add_argument("-t","--moltype", required=True, help="Type of molecule (apo or ligand)")
 
     args = parser.parse_args()
 
     parent = Path(args.parent)
 
-    if args.type not in ['apo', 'ligand']:
-        raise NameError("Invalid type, please choose either apo or ligand.")
+    if args.moltype not in ['apo', 'ligand']:
+        raise NameError("Invalid moltype, please choose either apo or ligand.")
 
     mi = MutualInfo(
         parent=str(parent),
         sr = args.sr,
         lig=args.lig,
-        type=args.type
+        moltype=args.moltype
     )
 
     mi.processing()
