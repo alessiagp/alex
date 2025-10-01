@@ -29,11 +29,11 @@ class MutualInfo():
         self.moltype = moltype
 
         if moltype == "apo":
-            self.topology     = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_final_noH2O.gro"
-            self.trajectory   = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_cut_aligned_noH2O.xtc"
+            self.topology     = f"{parent}/{sr}/{moltype}_MDSimulations/50-final-MD-data/md_final_noH2O.gro"
+            self.trajectory   = f"{parent}/{sr}/{moltype}_MDSimulations/50-final-MD-data/md_cut_aligned_noH2O.xtc"
         elif moltype == "ligand":
-            self.topology     = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_noH2O.gro"
-            self.trajectory   = f"{parent}/../{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_aligned_noH2O.xtc"
+            self.topology     = f"{parent}/{sr}/{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_noH2O.gro"
+            self.trajectory   = f"{parent}/{sr}/{moltype}_MDSimulations/50-final-MD-data/md_{lig}_final_aligned_noH2O.xtc"
 
         self.savedir = f'{self.currdir}/CACHE'
         mdigest.core.toolkit.folder_exists(self.savedir)
