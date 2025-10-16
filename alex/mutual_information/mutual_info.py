@@ -49,14 +49,13 @@ class MutualInfo():
         mds.set_num_replicas(1)
         mds.load_system(self.topology, self.trajectory)
         mds.align_traj(inmem=True, selection='name CA')
-        mds.set_selection('protein', 'protein') 
-        mds.set_selection('protein and name CA', 'CA')
+        mds.set_selection('protein and name CA', 'protein')
         mds.stride_trajectory(initial=0, final=-1, step=1)
 
         if "dyncorr" in self.corr:
             # correlation from CA displacements 
             logging.info(f"Compute correlation from CA displacements for {self.moltype} {self.sr} system")
-            dyncorr = DynCorr(mds, system_selstr="CA")
+            dyncorr = DynCorr(mds)
             dyncorr.parse_dynamics(scale=True, normalize=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, VERBOSE=True, COV_DISP=True)
             dyncorr.save_class(file_name_root=f'{self.savedir}/dyncorr')
             dyncorr.edge_exclusion(spatial_cutoff=4.5, contact_cutoff=.75, save_name={self.savedir} + '%s' %'apo' )
@@ -64,7 +63,7 @@ class MutualInfo():
         if "dih" in self.corr:
             # compute correlation from dihedral fluctuations
             logging.info(f"Compute correlation from dihedral fluctuations for {self.moltype} {self.sr} system")
-            dihdyncorr = DihDynCorr(mds, system_selstr="protein")
+            dihdyncorr = DihDynCorr(mds)
             dihdyncorr.parse_dih_dynamics(mean_center=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, COV_DISP=True)
             dihdyncorr.save_class(file_name_root=f'{self.savedir}/dih')
 
