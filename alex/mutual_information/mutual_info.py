@@ -1,3 +1,4 @@
+import os
 import mdigest
 from mdigest.core.parsetrajectory import *
 from mdigest.core.correlation import *
@@ -58,7 +59,7 @@ class MutualInfo():
             dyncorr = DynCorr(mds)
             dyncorr.parse_dynamics(scale=True, normalize=True, LMI='gaussian', MI='knn_5_2', DCC=True, PCC=True, VERBOSE=True, COV_DISP=True)
             dyncorr.save_class(file_name_root=f'{self.savedir}/dyncorr')
-            dyncorr.edge_exclusion(spatial_cutoff=4.5, contact_cutoff=.75, save_name={self.savedir} + '%s' %'apo' )
+            dyncorr.edge_exclusion(spatial_cutoff=4.5, contact_cutoff=.75, save_name=os.path.join(self.savedir, "apo"))
 
         if "dih" in self.corr:
             # compute correlation from dihedral fluctuations
