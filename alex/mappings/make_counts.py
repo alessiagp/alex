@@ -31,25 +31,39 @@ def atom_average_counts(mapping_matrix, nmaps, atom_to_aa_dict):
 
 def prob_maxatom(atomistic_probs, natoms, atom_to_aa_dict):
     """
-    Simple algorithm to retrieve the occurrences of each amino acid in each mapping 
-    according to the most retained atom in the amino acid.
-
-    Takes as input the processed probability file of length equal to number of atoms, the number of atoms in the structure, and the protein dictionary assigning aminoacids to the delimiting atomnums. 
+    For each amino acid, return the maximum atomic probability inside its atom interval.
     
-    1. use files from atomistic occurrence probabilities, iterate through them and select the aa according to AA_dict
-    2. keep only the highest atom probability among all amino acids --> they are going to be ordered already
+    Assumes:
+    - atom_to_aa_dict ranges are 1-based and inclusive
+    - ranges cover all atoms exactly once (checked automatically)
     """
 
-    aa_counts = []
- 
     if len(atomistic_probs) != natoms:
-        raise ValueError("The number of probabilities in the file is different than the number of atoms")
-    else:
-        # select aa ranges
-        for amino_acid, atom_interval in atom_to_aa_dict.items():
-        # select data corresponding to ranges in prob file --> slice list
-            temp_aa = atomistic_probs[atom_interval[0]:atom_interval[1]]
-        # find max among these and append to counts
-            aa_counts.append(max(temp_aa))
+        raise ValueError(
+            f"The number of probabilities ({len(atomistic_probs)}) does not match natoms ({natoms})."
+        )
+
+    covered_atoms = []
+    for start, end in atom_to_aa_dict.values():
+        covered_atoms.extend(range(start, end + 1))
+
+    covered_atoms = sorted(covered_atoms)
+
+    if covered_atoms[0] != 1 or covered_atoms[-1] != natoms:
+        raise ValueError(
+            f"Dictionary does not cover all atoms (expected 1–{natoms}, "
+            f"found {covered_atoms[0]}–{covered_atoms[-1]})."
+        )
+
+    for i in range(1, len(covered_atoms)):
+        if covered_atoms[i] != covered_atoms[i - 1] + 1:
+            raise ValueError(
+                f"Gap or overlap detected between atoms {covered_atoms[i - 1]} and {covered_atoms[i]}."
+            )
+
+    aa_counts = []
+    for aa, (start, end) in atom_to_aa_dict.items():
+        temp = atomistic_probs[start - 1:end]  # convert 1-based to 0-based
+        aa_counts.append(max(temp))
 
     return aa_counts
