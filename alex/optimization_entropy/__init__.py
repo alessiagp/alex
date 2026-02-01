@@ -1,1 +1,1 @@
-__all__=['Smap_analysis']
+__all__=['retrieve_entropy', 'Smap_analysis']
