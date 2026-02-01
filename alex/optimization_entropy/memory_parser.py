@@ -1,4 +1,5 @@
-import os
+#import os
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -7,25 +8,16 @@ class EntropyAnalyzer:
         """
         Initialize the analyzer with file paths and confidence interval Z-score.
         """
-        self.entropy_filename = entropy_filename
+        self.entropy_filename = Path(entropy_filename).resolve(strict=True)
         self.confidence_z = confidence_z
         self.entropy_data = None
-
-        self._validate_entropy_file()
-
-    def _validate_entropy_file(self):
-        """
-        Check if entropy input file exist.
-        """
-        if not os.path.exists(self.entropy_filename):
-            raise FileNotFoundError(f"Error: File '{self.entropy_filename}' not found.")
 
     def extract_entropies(self):
         """
         Extract entropy values from the file and format them into a DataFrame.
         """
         E = []
-        with open(self.entropy_filename, 'r') as f:
+        with self.entropy_filename.open() as f:
             for row in f:
                 row_proc = row.strip().split(" ")
                 E.append(row_proc)
