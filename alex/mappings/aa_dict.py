@@ -38,6 +38,6 @@ def parse_gro_to_dict(gro_file, keep_resname=True):
     if prev_resid is not None and keep_resname==True:
         AA_dict[f"{prev_resname}{prev_resid}"] = (start_idx, len(atom_lines))
     elif prev_resid is not None and keep_resname==False:
-        AA_dict[f"{prev_resid}"] = (start_idx, i-1)
+        AA_dict[f"{prev_resid}"] = (start_idx, len(atom_lines))
 
     return AA_dict

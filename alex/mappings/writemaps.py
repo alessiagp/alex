@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import numpy as np
 
 class MappingProcessor:
     def __init__(self, opt_name, natoms):
@@ -26,9 +27,11 @@ class MappingProcessor:
         """Check if '48-MAPPINGS' and 'probabilities' files exist, create them if missing."""
         mapping_files = [f for f in os.listdir(self.directory) if f.startswith("48-MAPPINGS")]
         probability_files = [f for f in os.listdir(self.directory) if f.startswith("probabilities")]
+        error_files = [f for f in os.listdir(self.directory) if f.startswith("error")]
 
         self.map_filepath = os.path.join(self.directory, mapping_files[0]) if mapping_files else os.path.join(self.directory, f"48-MAPPINGS_{self.opt_name}.txt")
         self.probs_filepath = os.path.join(self.directory, probability_files[0]) if probability_files else os.path.join(self.directory, f"probabilities_{self.opt_name}.txt")
+        self.error_filepath = os.path.join(self.directory, error_files[0]) if error_files else os.path.join(self.directory, f"error_{self.opt_name}.txt")
 
         # Create empty files if missing
         if not mapping_files:
@@ -37,7 +40,10 @@ class MappingProcessor:
         if not probability_files:
             open(self.probs_filepath, 'w').close()
             print(f"Created missing file: {self.probs_filepath}")
-
+        if not error_files:
+            open(self.error_filepath, 'w').close()
+            print(f"Created missing file: {self.error_filepath}")
+            
     def make_counts(self, mapping_matrix, nmaps):
         """Memoization algorithm to count occurrences of each atom in each mapping."""
         if nmaps == 0:
@@ -77,6 +83,7 @@ class MappingProcessor:
 
         print("Length of mapping file so far:", len(self.mappings))
 
+
     def _write_results(self):
         """Write mappings and probabilities to respective files."""
         print("\nWriting mapping into 48-MAPPINGS file...")
@@ -88,12 +95,23 @@ class MappingProcessor:
                 mf.write(" ".join(map(str, row)) + "\n")
 
         print("\nCalculating probabilities...")
-        probabilities = self.make_counts(self.mappings, len(self.mappings))
+        nmaps = len(self.mappings)  # Define nmaps here
+        probabilities = self.make_counts(self.mappings, nmaps)
 
         with open(self.probs_filepath, 'w') as pf:
-            pf.write(" ".join(map(str, probabilities)))
+            pf.write("\n".join(map(str, probabilities)))
+            
+        print("\nCalculating standard error and 95% confidence interval...")
+        prob_array = np.array(probabilities) 
+        
+        variance = prob_array * (1.0 - prob_array)
+        standard_error = np.sqrt(variance / nmaps)
+        errors_95ci = 1.96 * standard_error
+        
+        with open(self.error_filepath, 'w') as pf:
+            pf.write("\n".join(map(str, errors_95ci)))
 
-        print(f"\nResults written successfully to {self.map_filepath} and {self.probs_filepath}")
+        print(f"\nResults written successfully to {self.map_filepath}, {self.probs_filepath}, and {self.error_filepath}")
 
 # ==============================
 # Main execution

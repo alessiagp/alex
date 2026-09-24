@@ -5,4 +5,4 @@ Subpackage specific to deal with the postprocessing of EXCOGITO mappings.
 
 """
 
-__all__ = ['writemaps', 'parser_probfile','data_handler', 'make_counts', 'aa_dict']
+__all__ = ['writemaps', 'parser_probfile','data_handler', 'make_counts', 'aa_dict', 'smap_analysis']
