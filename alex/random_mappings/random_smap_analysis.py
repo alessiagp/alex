@@ -91,7 +91,7 @@ class RandomSMapProcessor:
 
         with open(self.smap_filepath, "w") as f:
             for i, smap in enumerate(self.smaps, start=1):
-                f.write(f"{i}\t{smap:.6f}\n")
+                f.write(f"{smap:.6f}\n")
 
         print(f"\nValues written to:")
         print(f"  {self.smap_filepath}")
