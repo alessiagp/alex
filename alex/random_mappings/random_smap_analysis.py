@@ -8,12 +8,12 @@ class RandomSMapProcessor:
     def __init__(self, filepath, nsmap=48):
         self.filepath = filepath
         self.nsmap_expected = nsmap
-
         self.smaps = []
 
         # Extract protein name from:
         # protein_name_random_N102.dat
         filename = os.path.basename(filepath)
+
         match = re.match(r"(.+)_random_N\d+\.dat$", filename)
 
         if not match:
@@ -25,17 +25,12 @@ class RandomSMapProcessor:
 
         self.protein_name = match.group(1)
 
-        # Write outputs in the same directory as the input file
+        # Output in the same directory as the input file
         output_dir = os.path.dirname(os.path.abspath(filepath))
 
         self.smap_filepath = os.path.join(
             output_dir,
             f"{self.protein_name}-smaps.txt"
-        )
-
-        self.stats_filepath = os.path.join(
-            output_dir,
-            f"{self.protein_name}-smap_stats.txt"
         )
 
         self._validate_inputs()
@@ -52,7 +47,6 @@ class RandomSMapProcessor:
         extracted_smaps = []
 
         with open(self.filepath, "r") as f:
-
             for line in f:
 
                 match = re.search(
@@ -90,40 +84,29 @@ class RandomSMapProcessor:
             return
 
         self._write_results()
+        self._print_statistics()
 
     def _write_results(self):
-        """Write individual values, mean, and sample standard deviation."""
+        """Write individual random_smap values."""
+
+        with open(self.smap_filepath, "w") as f:
+            for i, smap in enumerate(self.smaps, start=1):
+                f.write(f"{i}\t{smap:.6f}\n")
+
+        print(f"\nValues written to:")
+        print(f"  {self.smap_filepath}")
+
+    def _print_statistics(self):
+        """Calculate and print average and sample standard deviation."""
 
         smap_array = np.array(self.smaps)
 
         mean_smap = np.mean(smap_array)
-
-        # Sample standard deviation
         std_smap = np.std(smap_array, ddof=1)
 
-        # ----------------------------------
-        # Write individual values
-        # ----------------------------------
-
-        with open(self.smap_filepath, "w") as f:
-
-            for i, smap in enumerate(self.smaps, start=1):
-                f.write(f"{i}\t{smap:.6f}\n")
-
-        # ----------------------------------
-        # Write statistics
-        # ----------------------------------
-
-        with open(self.stats_filepath, "w") as f:
-            f.write(f"Average random_smap: {mean_smap:.6f}\n")
-            f.write(f"Standard deviation: {std_smap:.6f}\n")
-
-        print("\nResults written successfully:")
-        print(f"  {self.smap_filepath}")
-        print(f"  {self.stats_filepath}")
-
-        print(f"\nAverage random_smap = {mean_smap:.6f}")
-        print(f"Standard deviation = {std_smap:.6f}")
+        print("\nStatistics:")
+        print(f"  Average random_smap:      {mean_smap:.6f}")
+        print(f"  Standard deviation:       {std_smap:.6f}")
 
 
 # ==============================
