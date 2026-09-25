@@ -28,7 +28,7 @@ def atom_average_counts(mapping_matrix, nmaps, atom_to_aa_dict):
     return amino_acid_probabilities
     
 #------------------------------------------------------------------------------------------------#
-
+    
 def prob_maxatom(atomistic_probs, natoms, atom_to_aa_dict):
     """
     For each amino acid, return the maximum atomic probability inside its atom interval.
@@ -67,3 +67,50 @@ def prob_maxatom(atomistic_probs, natoms, atom_to_aa_dict):
         aa_counts.append(max(temp))
 
     return aa_counts
+
+
+def extract_maxatom_with_errors(atomistic_probs, atom_errors, atom_to_aa_dict):
+    """
+    Extracts the maximum probability per amino acid and assigns the 
+    corresponding atom's error to it.
+    
+    Parameters:
+    - atomistic_probs: 1D array of probabilities for all atoms
+    - atom_errors: 1D array of errors for all atoms (calculated via Bernoulli trials)
+    - atom_to_aa_dict: dictionary mapping AA name/index to (start, end) atom intervals (1-based)
+    """
+    aa_max_probs = []
+    aa_errors = []
+    
+    for aa, (start, end) in atom_to_aa_dict.items():
+        # Slice the interval (convert 1-based to 0-based)
+        # Note: dict intervals are usually inclusive (start:end+1), adjust based on your slicing
+        temp_probs = atomistic_probs[start - 1:end] 
+        
+        # 1. Find the maximum probability in this amino acid
+        max_idx = np.argmax(temp_probs)
+        max_prob = temp_probs[max_idx]
+        aa_max_probs.append(max_prob)
+        
+        # 2. Find the absolute index in the global array to fetch the correct error
+        global_atom_idx = (start - 1) + max_idx
+        error_for_max_atom = atom_errors[global_atom_idx]
+        aa_errors.append(error_for_max_atom)
+        
+    return aa_max_probs, aa_errors
+
+
+def get_bounded_errors(probs, errors):
+    """
+    Converts symmetric errors into bounded asymmetric errors [lower_err, upper_err]
+    so that error bars do not exceed the [0, 1] interval.
+    """
+    probs = np.array(probs)
+    errors = np.array(errors)
+    
+    # Calculate the allowable distances
+    lower_errors = np.minimum(errors, probs)
+    upper_errors = np.minimum(errors, 1.0 - probs)
+    
+    # Matplotlib expects a 2xN array/list for asymmetric yerr
+    return [lower_errors, upper_errors]
