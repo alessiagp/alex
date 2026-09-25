@@ -10,14 +10,16 @@ class SMapProcessor:
         self.directory = os.path.join(self.workdir, "optimize-results")
 
         self.opt_name = opt_name
-        self.nsmap = nsmap
+        self.nsmap_expected = nsmap
 
         self.smaps = []
-        self.smap_filepath = ""
-        self.stats_filepath = ""
+
+        self.smap_filepath = os.path.join(
+            self.directory,
+            f"last_smaps_{self.opt_name}.txt"
+        )
 
         self._validate_inputs()
-        self._set_output_files()
 
     def _validate_inputs(self):
         """Validate input arguments and ensure directory exists."""
@@ -25,35 +27,29 @@ class SMapProcessor:
             print(f"Error: Directory '{self.directory}' does not exist.")
             sys.exit(1)
 
-    def _set_output_files(self):
-        """Set output file paths."""
-        self.smap_filepath = os.path.join(
-            self.directory,
-            f"last_smaps_{self.opt_name}.txt"
-        )
-
-        self.stats_filepath = os.path.join(
-            self.directory,
-            f"last_smaps_stats_{self.opt_name}.txt"
-        )
-
     def _extract_last_smap(self, filepath):
         """Extract the last_smap value from an optimization file."""
 
         with open(filepath, "r") as f:
             lines = f.readlines()
 
-        # Search backwards, since last_smap is expected near the end
+        # Search backwards because last_smap is near the end
         for line in reversed(lines):
+
             match = re.search(
-                r"last_smap\s+([+-]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?)",
+                r"last_smap\s+"
+                r"([+-]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?)",
                 line
             )
 
             if match:
                 return float(match.group(1))
 
-        print(f"Warning: No last_smap found in {os.path.basename(filepath)}")
+        print(
+            f"Warning: No last_smap found in "
+            f"{os.path.basename(filepath)}"
+        )
+
         return None
 
     def process_files(self):
@@ -63,69 +59,64 @@ class SMapProcessor:
 
         for file in sorted(os.listdir(self.directory)):
 
-            if not file.startswith(self.opt_name):
-                continue
-
             filepath = os.path.join(self.directory, file)
 
-            # Skip directories
             if not os.path.isfile(filepath):
+                continue
+
+            if not file.startswith(self.opt_name):
                 continue
 
             smap = self._extract_last_smap(filepath)
 
             if smap is not None:
                 self.smaps.append(smap)
-                print(f"{file}: last_smap = {smap}")
 
-        print(f"\nFound {len(self.smaps)} last_smap values.")
+                print(
+                    f"{file}: last_smap = {smap:.6f}"
+                )
 
-        if len(self.smaps) != self.nsmap:
+        nsmap = len(self.smaps)
+
+        print(f"\nFound {nsmap} last_smap values.")
+
+        if nsmap != self.nsmap_expected:
             print(
-                f"Warning: Expected {self.nsmap} values, "
-                f"but found {len(self.smaps)}."
+                f"Warning: Expected {self.nsmap_expected} values, "
+                f"but found {nsmap}."
             )
 
-        self._write_results()
-
-    def _write_results(self):
-        """Write individual smaps, average, and standard deviation."""
-
-        if not self.smaps:
-            print("Warning: No smap values found.")
+        if nsmap == 0:
+            print("No last_smap values found.")
             return
 
-        # Convert to numpy array
-        smap_array = np.array(self.smaps)
+        self._write_results()
+        self._print_statistics()
 
-        # Average
-        mean_smap = np.mean(smap_array)
-
-        # Standard deviation of the sample
-        std_smap = np.std(smap_array, ddof=1)
-
-        # ----------------------------------
-        # Write individual last_smap values
-        # ----------------------------------
+    def _write_results(self):
+        """Write individual last_smap values."""
 
         with open(self.smap_filepath, "w") as f:
-            for smap in self.smaps:
-                f.write(f"{smap:.6f}\n")
 
-        # ----------------------------------
-        # Write statistics
-        # ----------------------------------
+            for i, smap in enumerate(self.smaps, start=1):
+                f.write(f"{i}\t{smap:.6f}\n")
 
-        with open(self.stats_filepath, "w") as f:
-            f.write(f"Average last_smap: {mean_smap:.6f}\n")
-            f.write(f"Standard deviation: {std_smap:.6f}\n")
-
-        print(f"\nResults written successfully:")
+        print("\nValues written to:")
         print(f"  {self.smap_filepath}")
-        print(f"  {self.stats_filepath}")
 
-        print(f"\nAverage last_smap = {mean_smap:.6f}")
-        print(f"Standard deviation = {std_smap:.6f}")
+    def _print_statistics(self):
+        """Calculate and print average and sample standard deviation."""
+
+        smap_array = np.array(self.smaps)
+
+        mean_smap = np.mean(smap_array)
+
+        # Sample standard deviation
+        std_smap = np.std(smap_array, ddof=1)
+
+        print("\nStatistics:")
+        print(f"  Average last_smap:      {mean_smap:.6f}")
+        print(f"  Standard deviation:    {std_smap:.6f}")
 
 
 # ==============================
@@ -143,5 +134,9 @@ if __name__ == "__main__":
 
     opt_name = sys.argv[1]
 
-    processor = SMapProcessor(opt_name)
+    processor = SMapProcessor(
+        opt_name,
+        nsmap=48
+    )
+
     processor.process_files()
